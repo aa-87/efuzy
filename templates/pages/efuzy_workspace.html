@@ -1,0 +1,127 @@
+<section class="kgrid">
+  {{#summary}}
+  <div class="metric">
+    <div class="metric-k">{{label}}</div>
+    <div class="metric-v">{{value}}</div>
+  </div>
+  {{/summary}}
+</section>
+
+<div class="mt-5 twocol">
+  <section class="space-y-4">
+    <div class="panel panel-pad">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="section-title">Ingest</div>
+          <div class="section-lead">Upload a file now or bind a profile before the first run.</div>
+        </div>
+        <span class="chip">MVP workflow: 837 → CSV</span>
+      </div>
+      <form id="efuzyUploadForm" class="mt-4 space-y-4" action="/efuzy/api/upload" method="post" enctype="multipart/form-data">
+        <div class="workspace-drop">
+          <div class="text-base font-medium">Drop an 837 file here or choose a file</div>
+          <div class="mt-2 subtle text-sm">Designed for very large files. The server stages uploads safely and creates a queued job.</div>
+          <input class="mt-4" type="file" name="file">
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <div>
+            <label class="mb-2 block text-sm font-medium">Profile</label>
+            <select name="profileId">
+              <option value="">Default claim summary</option>
+              {{#profiles}}
+              <option value="{{id}}">{{name}} · {{exportMode}}</option>
+              {{/profiles}}
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium">Run mode</label>
+            <div class="rounded-xl border border-work-700 px-3 py-2 text-sm subtle">Queued on upload. Run from preview.</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="btn-primary" type="submit">Upload file</button>
+          <div id="uploadResult" class="text-sm subtle"></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="section-title">Recent jobs</div>
+          <div class="section-lead">Job queue, completion state, and direct export links.</div>
+        </div>
+      </div>
+      {{#recentEmpty}}
+      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-5 subtle text-sm">No jobs yet.</div>
+      {{/recentEmpty}}
+      {{#recentJobs}}
+      <div class="mt-4 rounded-2xl border border-work-800 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="font-medium"><a href="{{href}}" class="hover:underline">Job #{{id}}</a></div>
+            <div class="mt-1 text-sm subtle">{{fileName}}</div>
+          </div>
+          <span class="chip status-{{status}}">{{status}}</span>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs subtle">
+          <span>{{workflowType}}</span>
+          <span>•</span>
+          <span>{{createdAt}}</span>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <a class="btn-secondary" href="{{href}}">Preview</a>
+          <a class="btn-secondary" href="{{exportHref}}">Export</a>
+        </div>
+      </div>
+      {{/recentJobs}}
+    </div>
+  </section>
+
+  <aside class="space-y-4">
+    <div class="panel panel-pad">
+      <div class="section-title">Staged files</div>
+      <div class="section-lead">Most recent uploads staged on the server.</div>
+      {{#filesEmpty}}
+      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-4 subtle text-sm">No staged files yet.</div>
+      {{/filesEmpty}}
+      {{#files}}
+      <div class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-work-800 px-3 py-3">
+        <div class="min-w-0">
+          <div class="truncate text-sm font-medium">{{name}}</div>
+          <div class="mt-1 text-xs subtle">{{createdAt}}</div>
+        </div>
+        <span class="chip">{{size}}</span>
+      </div>
+      {{/files}}
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Profiles</div>
+      <div class="section-lead">Saved export structures.</div>
+      {{#profiles}}
+      <a href="{{href}}" class="mt-3 block rounded-xl border border-work-800 px-3 py-3 hover:border-accent-500">
+        <div class="text-sm font-medium">{{name}}</div>
+        <div class="mt-1 text-xs subtle">{{exportMode}}</div>
+      </a>
+      {{/profiles}}
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Automation</div>
+      <div class="section-lead">Watched-folder bindings and processing behavior.</div>
+      {{#automationEmpty}}
+      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-4 subtle text-sm">No automation rules yet.</div>
+      {{/automationEmpty}}
+      {{#automation}}
+      <div class="mt-3 rounded-xl border border-work-800 px-3 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-medium text-sm">{{name}}</div>
+          <span class="chip">{{#enabled}}enabled{{/enabled}}{{^enabled}}disabled{{/enabled}}</span>
+        </div>
+        <div class="mt-1 text-xs subtle">{{inputFolder}}</div>
+      </div>
+      {{/automation}}
+    </div>
+  </aside>
+</div>

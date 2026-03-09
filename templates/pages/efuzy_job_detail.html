@@ -1,0 +1,46 @@
+<div class="panel panel-pad">
+  <div class="flex items-center justify-between gap-3">
+    <div>
+      <div class="section-title">Job #{{job.id}}</div>
+      <div class="section-lead">{{job.fileName}}</div>
+    </div>
+    <span class="chip status-{{job.status}}">{{job.status}}</span>
+  </div>
+  <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="rounded-xl border border-work-800 px-3 py-3">
+      <div class="text-xs uppercase tracking-[0.14em] subtle">Created</div>
+      <div class="mt-2 text-sm">{{job.createdAt}}</div>
+    </div>
+    <div class="rounded-xl border border-work-800 px-3 py-3">
+      <div class="text-xs uppercase tracking-[0.14em] subtle">Started</div>
+      <div class="mt-2 text-sm">{{job.startedAt}}</div>
+    </div>
+    <div class="rounded-xl border border-work-800 px-3 py-3">
+      <div class="text-xs uppercase tracking-[0.14em] subtle">Ended</div>
+      <div class="mt-2 text-sm">{{job.endedAt}}</div>
+    </div>
+    <div class="rounded-xl border border-work-800 px-3 py-3">
+      <div class="text-xs uppercase tracking-[0.14em] subtle">Output</div>
+      <div class="mt-2 text-sm truncate">{{job.outputPath}}</div>
+    </div>
+  </div>
+
+  <div class="mt-6 overflow-x-auto">
+    <table class="table-compact">
+      <thead class="table-head">
+        <tr>
+          <th>Stat</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#job.stats}}
+        <tr class="table-row">
+          <td>{{key}}</td>
+          <td>{{value}}</td>
+        </tr>
+        {{/job.stats}}
+      </tbody>
+    </table>
+  </div>
+</div>

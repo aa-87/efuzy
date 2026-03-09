@@ -1,0 +1,13 @@
+MIOJSON1
+	; JSON HELPERS
+	;
+	Q
+	;	
+	;	SET JSON=$$EN^MIOJSON1(.TMP)
+EN(%ARR)
+	N JSON,%TO S JSON=""
+	D ENCODE^MIOJSON2($NA(%ARR),$NA(%TO))
+	S A="" F  S A=$O(%TO(A)) Q:A=""  S JSON=JSON_%TO(A)
+	Q JSON
+	;	
+	;

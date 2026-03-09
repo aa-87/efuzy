@@ -1,0 +1,35 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <div class="section-title">Saved profiles</div>
+    <div class="section-lead">Persist export structures for repeatable jobs and automation rules.</div>
+  </div>
+  <a class="btn-primary" href="/efuzy/profiles/new">New profile</a>
+</div>
+
+<div class="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+  {{#profiles}}
+  <a href="{{href}}" class="panel panel-pad hover:border-accent-500">
+    <div class="flex items-center justify-between gap-3">
+      <div class="font-medium">{{name}}</div>
+      <span class="chip">{{exportMode}}</span>
+    </div>
+    <div class="mt-2 subtle text-sm">{{workflowType}}</div>
+    <div class="mt-4 text-xs subtle">Fields</div>
+    <div class="mt-2 rounded-xl border border-work-800 px-3 py-3 text-sm">{{selectedFields}}</div>
+  </a>
+  {{/profiles}}
+</div>
+
+<div class="mt-6 panel panel-pad">
+  <div class="section-title">Available export models</div>
+  <div class="section-lead">Core MVP models: claim summary, service lines, subscriber/patient, provider context, and custom CSV.</div>
+  <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    {{#maps.modes}}
+    <div class="rounded-2xl border border-work-800 p-4">
+      <div class="font-medium">{{label}}</div>
+      <div class="mt-1 text-sm subtle">Key: {{id}}</div>
+      <div class="mt-3 text-xs subtle">Configured in EFU837MAP.</div>
+    </div>
+    {{/maps.modes}}
+  </div>
+</div>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en" data-theme="{{theme.mode}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{page.title}} · {{app.name}}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: ['class', '[data-theme="dark"]'],
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter','ui-sans-serif','system-ui','sans-serif']
+          },
+          colors: {
+            work: {
+              950:'#0b0f19',
+              900:'#0f172a',
+              800:'#172033',
+              700:'#23304a',
+              600:'#334155',
+              500:'#64748b',
+              400:'#94a3b8',
+              300:'#cbd5e1',
+              200:'#e2e8f0',
+              100:'#f1f5f9',
+              50:'#f8fafc'
+            },
+            accent: {
+              600:'#4f46e5',
+              500:'#6366f1',
+              400:'#818cf8'
+            }
+          },
+          boxShadow: {
+            panel: '0 10px 30px rgba(2,6,23,0.18)'
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer base {
+      html { @apply antialiased; }
+      body { @apply bg-work-950 text-work-100 dark:bg-work-950 dark:text-work-100 bg-work-50 text-work-900; }
+      [data-theme="light"] body { @apply bg-work-50 text-work-900; }
+      [data-theme="light"] .panel { @apply bg-white border-work-200; }
+      [data-theme="light"] .subtle { @apply text-work-600; }
+      [data-theme="light"] .chip { @apply bg-work-100 text-work-700 border-work-200; }
+      [data-theme="light"] .table-head { @apply bg-work-100 text-work-700; }
+      [data-theme="light"] .table-row { @apply border-work-200 hover:bg-work-50; }
+      [data-theme="dark"] .panel { @apply bg-work-900/95 border-work-800; }
+      [data-theme="dark"] .subtle { @apply text-work-400; }
+      [data-theme="dark"] .chip { @apply bg-work-800 text-work-200 border-work-700; }
+      [data-theme="dark"] .table-head { @apply bg-work-900 text-work-400; }
+      [data-theme="dark"] .table-row { @apply border-work-800 hover:bg-work-900/70; }
+      input, select, textarea {
+        @apply w-full rounded-xl border border-work-700 bg-work-950/80 px-3 py-2 text-sm text-work-100 outline-none ring-0 transition;
+      }
+      [data-theme="light"] input, [data-theme="light"] select, [data-theme="light"] textarea {
+        @apply bg-white border-work-300 text-work-900;
+      }
+      input:focus, select:focus, textarea:focus {
+        @apply border-accent-500 ring-2 ring-accent-500/20;
+      }
+    }
+    @layer components {
+      .app-shell { @apply min-h-screen grid grid-cols-[16rem_1fr]; }
+      .sidebar { @apply border-r border-work-800 bg-work-900/80 backdrop-blur; }
+      .topbar { @apply flex items-center justify-between gap-4 border-b border-work-800 px-5 py-3; }
+      .panel { @apply rounded-2xl border shadow-panel; }
+      .panel-pad { @apply p-4 md:p-5; }
+      .btn { @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition; }
+      .btn-primary { @apply btn bg-accent-600 text-white hover:bg-accent-500; }
+      .btn-secondary { @apply btn border border-work-700 bg-work-900 text-work-100 hover:bg-work-800; }
+      [data-theme="light"] .btn-secondary { @apply bg-white border-work-300 text-work-900 hover:bg-work-50; }
+      .chip { @apply inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium; }
+      .table-compact { @apply w-full text-sm; }
+      .table-compact th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide; }
+      .table-compact td { @apply px-3 py-2 align-top; }
+      .table-head { @apply border-b; }
+      .table-row { @apply border-b; }
+      .metric { @apply panel panel-pad; }
+      .metric-k { @apply text-xs uppercase tracking-[0.12em] subtle; }
+      .metric-v { @apply mt-2 text-2xl font-semibold; }
+      .workspace-drop { @apply rounded-2xl border-2 border-dashed border-work-700 bg-work-950/50 p-6 text-center transition hover:border-accent-500; }
+      [data-theme="light"] .workspace-drop { @apply bg-work-50 border-work-300; }
+      .section-title { @apply text-lg font-semibold tracking-tight; }
+      .section-lead { @apply subtle mt-1 text-sm; }
+      .nav-link { @apply flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-work-800; }
+      [data-theme="light"] .nav-link { @apply hover:bg-work-100; }
+      .nav-link-active { @apply bg-accent-600/15 text-accent-400; }
+      .status-queued { @apply bg-amber-500/15 text-amber-300 border border-amber-400/20; }
+      .status-running { @apply bg-sky-500/15 text-sky-300 border border-sky-400/20; }
+      .status-completed { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-400/20; }
+      .status-failed { @apply bg-rose-500/15 text-rose-300 border border-rose-400/20; }
+      .kgrid { @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4; }
+      .twocol { @apply grid gap-4 xl:grid-cols-[1.2fr_0.8fr]; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar px-4 py-5">
+      <div class="mb-6">
+        <div class="text-xs uppercase tracking-[0.22em] subtle">workspace</div>
+        <div class="mt-2 text-2xl font-semibold">{{app.name}}</div>
+        <div class="mt-2 text-sm subtle">{{app.tagline}}</div>
+        <div class="mt-4">
+          <span class="chip">{{badges.mvp}}</span>
+        </div>
+      </div>
+      <nav class="space-y-1">
+        {{#nav}}
+        <a href="{{href}}" class="nav-link {{#isActive}}nav-link-active{{/isActive}}">
+          <span>{{label}}</span>
+          <span class="subtle">→</span>
+        </a>
+        {{/nav}}
+      </nav>
+      <div class="mt-8 panel panel-pad">
+        <div class="text-xs uppercase tracking-[0.16em] subtle">Design notes</div>
+        <ul class="mt-3 space-y-2 text-sm subtle">
+          <li>SSR-first MIOTPL pages</li>
+          <li>Tailwind dense workbench UI</li>
+          <li>Thin desktop-like shell</li>
+          <li>Workflow engine stays central</li>
+        </ul>
+      </div>
+    </aside>
+    <main class="min-w-0">
+      <header class="topbar">
+        <div>
+          <div class="text-lg font-semibold">{{page.heading}}</div>
+          <div class="text-sm subtle">{{page.lead}}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/efuzy/workspace" class="btn-secondary">Workspace</a>
+          <button class="btn-secondary" id="themeToggle" type="button">Theme</button>
+        </div>
+      </header>
+      <div class="p-5">
+        {{{content}}}
+      </div>
+    </main>
+  </div>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const saved = localStorage.getItem('efuzy-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      const btn = document.getElementById('themeToggle');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+          root.setAttribute('data-theme', next);
+          localStorage.setItem('efuzy-theme', next);
+        });
+      }
+      const uploadForm = document.getElementById('efuzyUploadForm');
+      const uploadResult = document.getElementById('uploadResult');
+      if (uploadForm) {
+        uploadForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const fd = new FormData(uploadForm);
+          if (uploadResult) uploadResult.textContent = 'Uploading…';
+          const res = await fetch(uploadForm.action, { method: 'POST', body: fd });
+          const json = await res.json();
+          if (json.redirect) window.location.href = json.redirect;
+          if (uploadResult) uploadResult.textContent = json.ok ? 'Upload complete.' : (json.error || 'Upload failed');
+        });
+      }
+      const runForm = document.getElementById('efuzyRunForm');
+      if (runForm) {
+        runForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const body = new URLSearchParams(new FormData(runForm));
+          const res = await fetch(runForm.action, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+          const json = await res.json();
+          if (json.redirect) window.location.href = json.redirect;
+          alert(json.ok ? 'Job completed.' : (json.error || 'Run failed'));
+        });
+      }
+    }());
+  </script>
+</body>
+</html>

@@ -1,0 +1,7003 @@
+MIOAUTHZT ; Auth (JWT + RBAC/ABAC) tests
+	;
+	;
+	; Sections
+	;   Core smoke / authz basics ............. T001-T013
+	;   Boundary / parser / config ............ T014-T035
+	;   Compatibility / reuse ................. T036-T055
+	;   RS256 and mixed algorithm paths ....... T056-T075
+	;   Expanded mixed-policy coverage ........ T076-T105
+	;   Reuse / invariants / stability ........ T106-T135
+	;   Scenario packs ........................ T136-T175
+	;   Matrix / stress style ................. T176-T185
+	;   Normal use cases ...................... T186-T200
+	;
+	NEW $ET SET $ET="DO STERR^MIOAUTHZT"
+	; ============================================================
+	; Core smoke / authz basics
+	; ============================================================
+	D T001 ; HS256 JWT allows route (role admin)
+	D T002 ; RBAC denies when role missing
+	D T003 ; ABAC owner check: ownerParam=id, ownerClaim=sub
+	D T004 ; missing Authorization header → 401
+	D T005 ; malformed Bearer token → 401
+	D T006 ; bad signature → 401
+	D T007 ; expired token → 401
+	D T008 ; token not yet valid (nbf) → 401
+	D T009 ; roles success with second role in CSV → 200
+	D T010 ; owner success when param matches sub → 200
+	D T011 ; issuer mismatch → 401
+	D T012 ; audience mismatch → 401
+	D T013 ; claims.* route metadata mismatch → 403
+	; ============================================================
+	; Boundary / parser / config coverage
+	; ============================================================
+	D T014 ; catches prefix parsing changes
+	D T015 ; catches base64url validation regressions
+	D T016 ; catches algorithm handling mistakes
+	D T017 ; verifies skew logic really works
+	D T018 ; verifies positive claim matching, not just mismatch denial
+	D T019 ; verifies configurable role claim names
+	D T020 ; verifies trimming logic on roles
+	D T021 ; and T022 verify combined authorization gates
+	D T023 ; verifies missing-secret configuration handling
+	D T024 ; exp exactly now with zero skew -> 200
+	D T025 ; nbf exactly now with zero skew -> 200
+	D T026 ; custom bearer prefix accepted -> 200
+	D T027 ; token without sub still auths -> 200 and empty sub
+	D T028 ; authRequired route without roles/claims/owner -> 200
+	D T029 ; multiple claims all match -> 200
+	D T030 ; first claim mismatch denies -> 403
+	D T031 ; roles empty string does not satisfy required role -> 403
+	D T032 ; repeated commas in roles still finds admin -> 200
+	D T033 ; owner route with missing ownerParam denies -> 403 not_owner
+	D T034 ; malformed header JSON token -> 401 jwt_alg_missing
+	D T035 ; auth mode jwt with public route still allows access -> 200
+	; ============================================================
+	; Compatibility / reuse / middleware interaction
+	; ============================================================
+	D T036 ; no exp claim -> 200 by current semantics
+	D T037 ; missing required custom claim -> 403 claim_mismatch
+	D T038 ; duplicate roles still satisfy admin
+	D T039 ; role matching is case-sensitive -> 403
+	D T040 ; four JWT segments -> 401 jwt_format
+	D T041 ; invalid JSON payload but valid signature -> 401 json error
+	D T042 ; owner claim empty -> 403 not_owner
+	D T043 ; protected request then public request in same test
+	D T044 ; stale auth context does not grant next request with bad token
+	D T045 ; RS256 configured without verifier -> 401 jwt_rs256_no_verifier
+	D T046 ; public route ignores bad auth header -> 200
+	D T047 ; custom bearer prefix mismatch -> 401 jwt_missing
+	D T048 ; empty signature segment -> 401 jwt_format
+	D T049 ; empty payload segment -> 401 jwt_format
+	D T050 ; invalid base64url length -> 401 b64url_length
+	D T051 ; audience exact match -> 200
+	D T052 ; issuer exact match -> 200
+	D T053 ; alternate roles claim missing -> 403 role_required
+	D T054 ; claim mismatch on second required claim -> 403
+	D T055 ; stale admin does not leak into fresh low-privilege request
+	; ============================================================
+	; RS256 and mixed algorithm paths
+	; ============================================================
+	D T056 ; RS256 with missing verifier entry -> 401 jwt_rs256_no_verifier
+	D T057 ; empty bearer prefix accepts raw token header value
+	D T058 ; explicit now override can keep expired token valid under skew
+	D T059 ; explicit now override can force not-yet-valid denial
+	D T060 ; claim exact match with empty string -> 200
+	D T061 ; protected route with bad token then good token in same test
+	D T062 ; owner passes but role fails first -> 403 role_required
+	D T063 ; owner fails even when claim requirement passes -> 403 not_owner
+	D T064 ; issuer empty config does not enforce issuer
+	D T065 ; audience empty config does not enforce audience
+	D T066 ; authRequired explicit 0 does not enforce auth -> 200
+	D T067 ; issuer + audience both exact match -> 200
+	D T068 ; missing rolesClaim with owner-only route still allows owner success -> 200
+	D T069 ; roles required plus matching claim -> 200
+	D T070 ; roles pass but missing required claim -> 403 claim_mismatch
+	D T071 ; owner passes with numeric-looking id string exact match -> 200
+	D T072 ; owner fails with numeric-looking id non-exact mismatch -> 403 not_owner
+	D T073 ; route metadata change after RESET does not leak from prior test
+	D T074 ; malformed JSON header with alg omitted but valid payload/signature -> 401 jwt_alg_missing or json failure
+	D T075 ; protected route with valid token and unrelated extra claims -> 200
+	; ============================================================
+	; Expanded mixed-policy coverage
+	; ============================================================
+	D T076 ; claim value with spaces exact match -> 200
+	D T077 ; claim value with spaces mismatch -> 403
+	D T078 ; roles required any-of first role matches -> 200
+	D T079 ; roles required any-of second role matches -> 200
+	D T080 ; roles required any-of none match -> 403
+	D T081 ; roles metadata with spaces still matches -> 200
+	D T082 ; protected POST route works with JWT -> 200
+	D T083 ; same path different method metadata isolated
+	D T084 ; token with only signature mismatch and same payload -> 401
+	D T085 ; path param with dash owner exact match -> 200
+	D T086 ; route requires manager, token has admin and manager -> 200
+	D T087 ; claim exact numeric-looking string match -> 200
+	D T088 ; claim numeric-looking string mismatch -> 403
+	D T089 ; token with trailing spaces in auth header after token -> 401 bad signature
+	D T090 ; route with only claim requirement denies unauthenticated -> 401
+	D T091 ; route with role and claim both fail still returns 403
+	D T092 ; malformed auth header without token -> 401 jwt_missing
+	D T093 ; route owner + claim both pass -> 200
+	D T094 ; auth context fresh after public request then protected request
+	D T095 ; explicit now override with future value expires otherwise-valid token -> 401
+	D T096 ; token with only sub and issuer/audience unset -> 200
+	D T097 ; empty roles claim on non-role route still allows -> 200
+	D T098 ; route role required and roles claim omitted -> 403
+	D T099 ; claim present but route expects different empty/non-empty -> 403
+	D T100 ; path route metadata survives multiple compile calls
+	D T101 ; wrong method on protected route should not accidentally authorize matched path
+	D T102 ; token with valid signature and extra dot in header value -> 401 jwt_format
+	D T103 ; claim names do not collide with sub population
+	D T104 ; owner check with slash-free unusual chars underscore exact match -> 200
+	D T105 ; good token reused after prior deny still passes with fresh context
+	; ============================================================
+	; Reuse / invariants / stability
+	; ============================================================
+	D T106 ; RS256 verifier true -> 200
+	D T107 ; RS256 verifier false -> 401
+	D T108 ; RS256 verifier exception -> 401 verifier exception
+	D T109 ; RS256 + RBAC pass -> 200
+	D T110 ; RS256 + RBAC deny -> 403
+	D T111 ; RS256 + owner pass -> 200
+	D T112 ; RS256 + owner deny -> 403
+	D T113 ; RS256 verifier bad entry format -> 401
+	D T114 ; RS256 verifier illegal identifier entry -> 401
+	D T115 ; RS256 verifier true plus claim requirement pass -> 200
+	D T116 ; repeated successful dispatches with same valid HS256 token -> 200 both times
+	D T117 ; repeated denied dispatches with same bad-signature token -> 401 both times
+	D T118 ; HS256 token on RS256-only config without verifier -> 401 jwt_alg_unsupported or jwt_rs256_no_verifier not triggered
+	D T119 ; token with sub only reused across owner route mismatch then match
+	D T120 ; custom rolesClaim and unrelated default roles claim present -> custom wins
+	D T121 ; malformed payload JSON with valid header and signature still 401 on every attempt
+	D T122 ; route requiring empty-string role name is effectively unsatisfied -> 403
+	D T123 ; claim with punctuation exact match -> 200
+	D T124 ; protected route with RS256 valid then HS256 valid in same config session
+	D T125 ; same valid token on two different protected routes with different policies
+	D T126 ; multiple extra claims preserved in auth claim map -> 200
+	D T127 ; same route protected then metadata changed after RESET to public
+	D T128 ; owner check with long identifier exact match -> 200
+	D T129 ; role deny does not populate handler status 200
+	D T130 ; claim mismatch deny does not remove auth ok marker
+	D T131 ; public route after denied protected route stays public
+	D T132 ; issuer enforced while audience empty only checks issuer
+	D T133 ; audience enforced while issuer empty only checks audience
+	D T134 ; same valid token under different now override can pass then expire
+	D T135 ; claim and role both pass on one route then different route denies on role only
+	; ============================================================
+	; Scenario packs
+	; ============================================================
+	D T136 ; same token across three routes with pass, deny, pass
+	D T137 ; empty custom bearer prefix with malformed raw token -> 401 jwt_format
+	D T138 ; claim name with mixed case exact match
+	D T139 ; claim name case mismatch denies
+	D T140 ; roles claim contains spaces only -> 403 role_required
+	D T141 ; two owner routes same token one pass one deny
+	D T142 ; token without sub fails owner route but still authenticates
+	D T143 ; issuer mismatch on RS256 verifier-true still denies at claim check
+	D T144 ; audience mismatch on RS256 verifier-true still denies at claim check
+	D T145 ; same good token reused after RS256 verifier exception route does not poison HS256
+	D T146 ; five-step mixed sequence preserves isolation across public/deny/allow
+	D T147 ; same HS256 token across GET/POST protected routes with different claim policies
+	D T148 ; two different rolesClaim configs in same session behave independently
+	D T149 ; same request path after RESET to different route metadata uses new metadata only
+	D T150 ; owner route with exact empty ownerParam name metadata behaves as deny
+	D T151 ; roles metadata empty string does not enforce RBAC
+	D T152 ; claim metadata only with no auth header on public route remains public
+	D T153 ; RS256 success followed by HS256 deny with same route metadata
+	D T154 ; future now override on RS256 token expires it too
+	D T155 ; many-claim token still enforces exact selected claim only	
+	D T156 ; long mixed session: public -> HS allow -> HS deny -> public -> HS allow
+	D T157 ; long mixed session: claim pass -> claim deny -> role deny -> claim pass
+	D T158 ; long owner session: deny -> pass -> deny with same config
+	D T159 ; HS and RS routes in one session, both pass independently
+	D T160 ; HS allow then RS verifier exception then HS allow again
+	D T161 ; now override sequence for one token: pass, pass, expire
+	D T162 ; claim exactness across three similar values
+	D T163 ; route set with three methods same path uses correct metadata per method
+	D T164 ; malformed RS256 token still format-fails before verifier config matters
+	D T165 ; final mixed invariant: deny does not stop later protected success on different route
+	D T166 ; looped stable protected success over 5 dispatches
+	D T167 ; looped stable RBAC deny over 5 dispatches
+	D T168 ; looped stable ABAC deny over 5 dispatches
+	D T169 ; alternating valid and malformed HS256 requests in one loop
+	D T170 ; long claim token reused across three claim routes with selective pass/deny
+	D T171 ; repeated public requests with junk auth header remain public
+	D T172 ; two HS256 configs with different secrets in same test isolate correctly
+	D T173 ; multiple role routes in one session use same parsed roles map correctly
+	D T174 ; repeated malformed header path does not create stale auth state
+	D T175 ; final session mix across HS pass, RS pass, HS deny, owner pass, public pass
+	; ============================================================
+	; Matrix / stress style
+	; ============================================================
+	D T176 ; table-driven RBAC matrix: admin pass, manager pass, user deny
+	D T177 ; table-driven claim matrix exactness
+	D T178 ; table-driven owner matrix exact and non-exact ids
+	D T179 ; table-driven malformed token matrix
+	D T180 ; rotate now override across same token around expiry boundary
+	D T181 ; mixed-route matrix with one token and alternating methods
+	D T182 ; HS/RS alternating success matrix in one config session
+	D T183 ; RS256 matrix: pass, RBAC deny, issuer deny
+	D T184 ; stale deny cannot poison later owner pass with same token family
+	D T185 ; final table-driven mixed matrix over three token kinds and two routes
+	; ============================================================
+	; Normal use cases
+	; ============================================================
+	D T186 ; normal secure page with basic authenticated user -> 200
+	D T187 ; admin-only settings page with admin role -> 200
+	D T188 ; manager report route with any-of role list -> 200
+	D T189 ; department-scoped page for billing user -> 200
+	D T190 ; owner can view own profile -> 200
+	D T191 ; owner plus department requirement both satisfied -> 200
+	D T192 ; POST create route for authenticated user -> 200
+	D T193 ; alternate roles claim groups for admin route -> 200
+	D T194 ; issuer and audience both configured and matched -> 200
+	D T195 ; same valid token reused on two normal protected pages -> 200 both
+	D T196 ; support manager route requiring both role and department -> 200
+	D T197 ; RS256 normal authenticated page with verifier stub -> 200
+	D T198 ; public landing page with auth mode enabled but no header -> 200
+	D T199 ; member area with custom bearer prefix Token -> 200
+	D T200 ; normal mixed session of public, secure, admin, owner, public
+	QUIT
+	;
+STERR
+	USE $PRINCIPAL WRITE "ERR ",$ZSTATUS,!
+	QUIT
+	;
+RESET
+	KILL ^MIO("ROUTE")
+	QUIT
+	;
+READALL(PATH,OUT)
+	NEW OIO SET OIO=$IO
+	SET OUT=""
+	NEW DEV SET DEV=PATH
+	OPEN DEV:(readonly:stream:nowrap)
+	USE DEV
+	NEW X
+	FOR  READ X#16384  QUIT:$ZEOF  SET OUT=OUT_X
+	CLOSE DEV
+	USE OIO
+	QUIT
+	;
+; Build HS256 JWT token with payload JSON string.;
+MKJWT(SECRET,PJSON)
+	NEW HJSON,H64,P64,DATA,SIG,S64,ERR
+	SET HJSON="{""alg"":""HS256"",""typ"":""JWT""}"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET S64=$$B64EURL^MIOAUTHJWT(SIG)
+	QUIT DATA_"."_S64
+	;
+T001 ; HS256 JWT allows route (role admin)
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	NEW CONF,REQ,CTX,DEV,OUT,OP,SECRET,NOW,TOK
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin,user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az001"
+	SET OP="tmp/mio_authz_t001.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T001][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T001][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","ok")),1,"[MIOAUTHZT][T001][auth ok]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T001][role]")
+	QUIT
+	;
+T002 ; RBAC denies when role missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	NEW CONF,REQ,CTX,DEV,OUT,OP,SECRET,NOW,TOK
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az002"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t002.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T002][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T002][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["MIOAUTHZ":1,1:0),1,"[MIOAUTHZT][T002][routine]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T002][reason]")
+	QUIT
+	;
+T003 ; ABAC owner check: ownerParam=id, ownerClaim=sub
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	NEW CONF,REQ,CTX,DEV,OUT,OP,SECRET,NOW,TOK
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u2" ; mismatch
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az003"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t003.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T003][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T003][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T003][reason]")
+	QUIT
+T004 ; Missing Authorization header -> 401 jwt_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET CTX("request_id")="az004"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t004.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T004][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T004][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_missing":1,1:0),1,"[MIOAUTHZT][T004][reason]")
+	QUIT
+	;
+T005 ; Malformed token -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az005"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t005.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T005][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T005][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T005][reason]")
+	QUIT
+	;
+T006 ; Bad signature -> 401 jwt_bad_signature
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")="wrongsecret"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az006"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t006.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T006][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T006][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_bad_signature":1,1:0),1,"[MIOAUTHZT][T006][reason]")
+	QUIT
+	;
+T007 ; Expired token -> 401 jwt_expired
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW-120)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az007"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t007.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T007][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T007][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_expired":1,1:0),1,"[MIOAUTHZT][T007][reason]")
+	QUIT
+	;
+T008 ; Not yet valid -> 401 jwt_not_yet_valid
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""nbf"":"_(NOW+600)_",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az008"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t008.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T008][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T008][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_not_yet_valid":1,1:0),1,"[MIOAUTHZT][T008][reason]")
+	QUIT
+	;
+T009 ; CSV roles with admin second -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user,admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az009"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t009.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T009][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T009][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T009][admin role]")
+	QUIT
+	;
+T010 ; Owner match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az010"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t010.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T010][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T010][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","sub")),"u1","[MIOAUTHZT][T010][sub]")
+	QUIT
+	;
+T011 ; Issuer mismatch -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","issuer")="good-iss"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""bad-iss"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az011"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t011.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T011][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T011][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_issuer":1,1:0),1,"[MIOAUTHZT][T011][reason]")
+	QUIT
+	;
+T012 ; Audience mismatch -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","audience")="good-aud"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""aud"":""bad-aud"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az012"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t012.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T012][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T012][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_audience":1,1:0),1,"[MIOAUTHZT][T012][reason]")
+	QUIT
+	;
+T013 ; claims.department mismatch -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az013"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t013.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T013][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T013][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:department":1,1:0),1,"[MIOAUTHZT][T013][reason]")
+	QUIT
+T014 ; Wrong bearer prefix -> 401 jwt_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Token "_TOK
+	SET CTX("request_id")="az014"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t014.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T014][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T014][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_missing":1,1:0),1,"[MIOAUTHZT][T014][reason]")
+	QUIT
+	;
+T015 ; Invalid base64url chars in token -> 401 b64url_char
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer abc$.def.ghi"
+	SET CTX("request_id")="az015"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t015.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T015][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T015][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["b64url_char":1,1:0),1,"[MIOAUTHZT][T015][reason]")
+	QUIT
+	;
+T016 ; Unsupported alg -> 401 jwt_alg_unsupported
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""alg"":""HS512"",""typ"":""JWT""}"
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET TOK=DATA_"."_$$B64EURL^MIOAUTHJWT(SIG)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az016"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t016.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T016][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T016][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_alg_unsupported":1,1:0),1,"[MIOAUTHZT][T016][reason]")
+	QUIT
+	;
+T017 ; Expired by 1 second but allowed by skew -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","clockSkewSeconds")=60
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW-1)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az017"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t017.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T017][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T017][handler ran]")
+	QUIT
+	;
+T018 ; Claims.department exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az018"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t018.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T018][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T018][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","claim","department")),"billing","[MIOAUTHZT][T018][claim]")
+	QUIT
+	;
+T019 ; Alternate roles claim name groups -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""groups"":""staff,admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az019"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t019.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T019][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T019][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T019][admin role]")
+	QUIT
+	;
+T020 ; Roles CSV trims whitespace -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":"" user , admin "",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az020"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t020.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T020][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T020][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T020][admin role]")
+	QUIT
+	;
+T021 ; Combined role + owner success -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user,admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az021"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t021.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T021][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T021][handler ran]")
+	QUIT
+	;
+T022 ; Combined role ok but owner mismatch -> 403 not_owner
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u2"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az022"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t022.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T022][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T022][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T022][reason]")
+	QUIT
+	;
+T023 ; Missing HMAC secret -> 401 jwt_hmac_secret_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az023"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t023.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T023][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T023][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_hmac_secret_missing":1,1:0),1,"[MIOAUTHZT][T023][reason]")
+	QUIT
+T024 ; exp exactly now with zero skew -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_NOW_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az024"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t024.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T024][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T024][handler ran]")
+	QUIT
+	;
+T025 ; nbf exactly now with zero skew -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""nbf"":"_NOW_",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az025"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t025.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T025][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T025][handler ran]")
+	QUIT
+	;
+T026 ; custom bearer prefix accepted -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","bearerPrefix")="Token "
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Token "_TOK
+	SET CTX("request_id")="az026"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t026.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T026][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T026][handler ran]")
+	QUIT
+	;
+T027 ; token without sub still auths -> 200 and empty sub
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az027"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t027.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T027][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T027][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","sub")),"","[MIOAUTHZT][T027][sub empty]")
+	QUIT
+	;
+T028 ; authRequired route without roles/claims/owner -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/plainsecure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u9"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/plainsecure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az028"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t028.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T028][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T028][handler ran]")
+	QUIT
+	;
+T029 ; multiple claims all match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	SET META("claims.region")="east"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""region"":""east"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az029"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t029.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T029][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T029][handler ran]")
+	QUIT
+	;
+T030 ; first claim mismatch denies -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	SET META("claims.region")="east"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""sales"",""region"":""east"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az030"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t030.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T030][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T030][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:department":1,1:0),1,"[MIOAUTHZT][T030][reason]")
+	QUIT
+	;
+T031 ; roles empty string does not satisfy required role -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":"""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az031"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t031.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T031][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T031][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T031][reason]")
+	QUIT
+	;
+T032 ; repeated commas in roles still finds admin -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":"",,admin,,"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az032"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t032.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T032][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T032][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T032][admin role]")
+	QUIT
+	;
+T033 ; owner route with missing ownerParam denies -> 403 not_owner
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="missingid"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az033"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t033.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T033][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T033][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T033][reason]")
+	QUIT
+T034 ; malformed header JSON token -> 401 jwt_alg_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""typ"":""JWT""}"
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET TOK=DATA_"."_$$B64EURL^MIOAUTHJWT(SIG)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az034"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t034.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T034][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T034][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_alg_missing":1,1:0),1,"[MIOAUTHZT][T034][reason]")
+	QUIT
+	;
+T035 ; auth mode jwt with public route still allows access -> 200
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/public"
+	SET CTX("request_id")="az035"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t035.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T035][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T035][handler ran]")
+	QUIT
+T036 ; no exp claim -> 200 by current semantics
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1""}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az036"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t036.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T036][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T036][handler ran]")
+	QUIT
+	;
+T037 ; missing required custom claim -> 403 claim_mismatch
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az037"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t037.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T037][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T037][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:department":1,1:0),1,"[MIOAUTHZT][T037][reason]")
+	QUIT
+	;
+T038 ; duplicate roles still satisfy admin
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin,admin,user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az038"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t038.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T038][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T038][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T038][admin role]")
+	QUIT
+	;
+T039 ; role matching is case-sensitive -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""Admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az039"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t039.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T039][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T039][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T039][reason]")
+	QUIT
+	;
+T040 ; four JWT segments -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer a.b.c.d"
+	SET CTX("request_id")="az040"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t040.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T040][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T040][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T040][reason]")
+	QUIT
+	;
+T041 ; invalid JSON payload but valid signature -> 401 json error
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX,ERR
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""alg"":""HS256"",""typ"":""JWT""}"
+	SET PJSON="{bad json"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET TOK=DATA_"."_$$B64EURL^MIOAUTHJWT(SIG)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az041"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t041.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T041][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T041][handler not ran]")
+	QUIT
+	;
+T042 ; owner claim empty -> 403 not_owner
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":"""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az042"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t042.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T042][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T042][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T042][reason]")
+	QUIT
+	;
+T043 ; protected request then public request in same test
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	KILL META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	;
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az043a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t043a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T043A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T043A][handler ran]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/public"
+	SET CTX("request_id")="az043b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t043b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T043B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T043B][handler ran]")
+	QUIT
+	;
+T044 ; stale auth context does not grant next request with bad token
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	;
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az044a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t044a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T044A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T044A][handler ran]")
+	;
+	; new request with bad token, fresh context
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az044b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t044b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T044B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T044B][handler not ran]")
+	QUIT
+	;
+T045 ; RS256 configured without verifier -> 401 jwt_rs256_no_verifier
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX,ERR
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""alg"":""RS256"",""typ"":""JWT""}"
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET TOK=$$B64EURL^MIOAUTHJWT(HJSON)_"."_$$B64EURL^MIOAUTHJWT(PJSON)_"."_$$B64EURL^MIOAUTHJWT("sig")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az045"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t045.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T045][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T045][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_rs256_no_verifier":1,1:0),1,"[MIOAUTHZT][T045][reason]")
+	QUIT
+T046 ; public route ignores bad auth header -> 200
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/public"
+	SET REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az046"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t046.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T046][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T046][handler ran]")
+	QUIT
+	;
+T047 ; custom bearer prefix mismatch -> 401 jwt_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","bearerPrefix")="Token "
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az047"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t047.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T047][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T047][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_missing":1,1:0),1,"[MIOAUTHZT][T047][reason]")
+	QUIT
+	;
+T048 ; empty signature segment -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX,ERR
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""alg"":""HS256"",""typ"":""JWT""}"
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET TOK=$$B64EURL^MIOAUTHJWT(HJSON)_"."_$$B64EURL^MIOAUTHJWT(PJSON)_"."
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az048"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t048.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T048][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T048][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T048][reason]")
+	QUIT
+	;
+T049 ; empty payload segment -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer abc..def"
+	SET CTX("request_id")="az049"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t049.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T049][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T049][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T049][reason]")
+	QUIT
+	;
+T050 ; invalid base64url length -> 401 b64url_length
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer a.abcde.c"
+	SET CTX("request_id")="az050"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t050.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T050][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T050][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["b64url_length":1,1:0),1,"[MIOAUTHZT][T050][reason]")
+	QUIT
+	;
+T051 ; audience exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","audience")="good-aud"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""aud"":""good-aud"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az051"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t051.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T051][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T051][handler ran]")
+	QUIT
+	;
+T052 ; issuer exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")="good-iss"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""good-iss"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az052"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t052.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T052][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T052][handler ran]")
+	QUIT
+	;
+T053 ; alternate roles claim missing -> 403 role_required
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az053"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t053.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T053][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T053][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T053][reason]")
+	QUIT
+	;
+T054 ; claim mismatch on second required claim -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	SET META("claims.region")="east"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""region"":""west"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az054"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t054.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T054][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T054][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:region":1,1:0),1,"[MIOAUTHZT][T054][reason]")
+	QUIT
+	;
+T055 ; stale admin does not leak into fresh low-privilege request
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	;
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az055a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t055a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T055A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T055A][handler ran]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az055b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t055b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T055B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T055B][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT2["role_required":1,1:0),1,"[MIOAUTHZT][T055B][reason]")
+	QUIT
+T056 ; RS256 with missing verifier entry -> 401 jwt_rs256_no_verifier
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET HJSON="{""alg"":""RS256"",""typ"":""JWT""}"
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET TOK=$$B64EURL^MIOAUTHJWT(HJSON)_"."_$$B64EURL^MIOAUTHJWT(PJSON)_"."_$$B64EURL^MIOAUTHJWT("sig")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az056"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t056.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T056][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T056][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_rs256_no_verifier":1,1:0),1,"[MIOAUTHZT][T056][reason]")
+	QUIT
+	;
+T057 ; empty bearer prefix accepts raw token header value
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","bearerPrefix")=""
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")=TOK
+	SET CTX("request_id")="az057"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t057.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T057][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T057][handler ran]")
+	QUIT
+	;
+T058 ; explicit now override can keep expired token valid under skew
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=10
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW-5)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az058"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t058.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T058][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T058][handler ran]")
+	QUIT
+	;
+T059 ; explicit now override can force not-yet-valid denial
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""nbf"":"_(NOW+1)_",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az059"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t059.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T059][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T059][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_not_yet_valid":1,1:0),1,"[MIOAUTHZT][T059][reason]")
+	QUIT
+	;
+T060 ; claim exact match with empty string -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.note")=""
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""note"":"""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az060"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t060.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T060][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T060][handler ran]")
+	QUIT
+	;
+T061 ; protected route with bad token then good token in same test
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az061a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t061a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["401":1,1:0),1,"[MIOAUTHZT][T061A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T061A][handler not ran]")
+	;
+	KILL REQ,CTX
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az061b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t061b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T061B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T061B][handler ran]")
+	QUIT
+	;
+T062 ; owner passes but role fails first -> 403 role_required
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az062"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t062.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T062][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T062][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T062][reason]")
+	QUIT
+	;
+T063 ; owner fails even when claim requirement passes -> 403 not_owner
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u2"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az063"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t063.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T063][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T063][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T063][reason]")
+	QUIT
+	;
+T064 ; issuer empty config does not enforce issuer
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")=""
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""anything"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az064"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t064.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T064][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T064][handler ran]")
+	QUIT
+	;
+T065 ; audience empty config does not enforce audience
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","audience")=""
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""aud"":""anything"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az065"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t065.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T065][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T065][handler ran]")
+	QUIT
+T066 ; authRequired explicit 0 does not enforce auth -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=0
+	DO ADDM^MIOROUTE("GET","/open","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/open"
+	SET CTX("request_id")="az066"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t066.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T066][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T066][handler ran]")
+	QUIT
+	;
+T067 ; issuer + audience both exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")="iss-1"
+	SET CONF("auth","jwt","audience")="aud-1"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""iss-1"",""aud"":""aud-1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az067"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t067.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T067][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T067][handler ran]")
+	QUIT
+	;
+T068 ; missing rolesClaim with owner-only route still allows owner success -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az068"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t068.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T068][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T068][handler ran]")
+	QUIT
+	;
+T069 ; roles required plus matching claim -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az069"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t069.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T069][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T069][handler ran]")
+	QUIT
+	;
+T070 ; roles pass but missing required claim -> 403 claim_mismatch
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az070"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t070.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T070][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T070][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:department":1,1:0),1,"[MIOAUTHZT][T070][reason]")
+	QUIT
+	;
+T071 ; owner passes with numeric-looking id string exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""001"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/001"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az071"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t071.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T071][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T071][handler ran]")
+	QUIT
+	;
+T072 ; owner fails with numeric-looking id non-exact mismatch -> 403 not_owner
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/001"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az072"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t072.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T072][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T072][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T072][reason]")
+	QUIT
+	;
+T073 ; route metadata change after RESET does not leak from prior test
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	DO RESET
+	KILL META
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az073"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t073.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T073][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T073][handler ran]")
+	QUIT
+	;
+T074 ; malformed JSON header with alg omitted but valid payload/signature -> 401 jwt_alg_missing or json failure
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX,ERR
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""typ"":""JWT"""
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET PJSON="{""sub"":""u1"",""exp"":"_(NOW+3600)_"}"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET TOK=DATA_"."_$$B64EURL^MIOAUTHJWT(SIG)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az074"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t074.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T074][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T074][handler not ran]")
+	QUIT
+	;
+T075 ; protected route with valid token and unrelated extra claims -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""foo"":""bar"",""x"":""1"",""y"":""2"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az075"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t075.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T075][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T075][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","claim","foo")),"bar","[MIOAUTHZT][T075][extra claim]")
+	QUIT
+T076 ; claim value with spaces exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.team")="core platform"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""team"":""core platform"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az076"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t076.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T076][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T076][handler ran]")
+	QUIT
+	;
+T077 ; claim value with spaces mismatch -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.team")="core platform"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""team"":""core  platform"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az077"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t077.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T077][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T077][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:team":1,1:0),1,"[MIOAUTHZT][T077][reason]")
+	QUIT
+	;
+T078 ; roles required any-of first role matches -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin,manager"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin,user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az078"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t078.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T078][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T078][handler ran]")
+	QUIT
+	;
+T079 ; roles required any-of second role matches -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin,manager"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user,manager"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az079"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t079.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T079][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T079][handler ran]")
+	QUIT
+	;
+T080 ; roles required any-of none match -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin,manager"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user,viewer"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az080"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t080.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T080][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T080][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T080][reason]")
+	QUIT
+	;
+T081 ; roles metadata with spaces still matches -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")=" admin , manager "
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""manager"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az081"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t081.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T081][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T081][handler ran]")
+	QUIT
+	;
+T082 ; protected POST route works with JWT -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("POST","/secure-post","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="POST"
+	SET REQ("path")="/secure-post"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az082"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t082.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T082][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T082][handler ran]")
+	QUIT
+	;
+T083 ; same path different method metadata isolated
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/dual","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	DO ADDM^MIOROUTE("POST","/dual","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	; GET with admin should pass
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/dual"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az083a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t083a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T083A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T083A][handler ran]")
+	; POST with same token should fail because manager required
+	KILL REQ,CTX
+	SET REQ("method")="POST"
+	SET REQ("path")="/dual"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az083b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t083b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T083B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T083B][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT2["role_required":1,1:0),1,"[MIOAUTHZT][T083B][reason]")
+	QUIT
+	;
+T084 ; token with only signature mismatch and same payload -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	; replace only signature with another valid-looking one
+	SET TOK=$P(TOK,".",1)_"."_$P(TOK,".",2)_"."_$$B64EURL^MIOAUTHJWT("wrongsig")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az084"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t084.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T084][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T084][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_bad_signature":1,1:0),1,"[MIOAUTHZT][T084][reason]")
+	QUIT
+	;
+T085 ; path param with dash owner exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u-1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u-1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az085"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t085.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T085][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T085][handler ran]")
+	QUIT
+T086 ; route requires manager, token has admin and manager -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin,manager"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az086"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t086.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T086][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T086][handler ran]")
+	QUIT
+	;
+T087 ; claim exact numeric-looking string match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.level")="2"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""level"":""2"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az087"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t087.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T087][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T087][handler ran]")
+	QUIT
+	;
+T088 ; claim numeric-looking string mismatch -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.level")="2"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""level"":""02"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az088"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t088.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T088][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T088][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:level":1,1:0),1,"[MIOAUTHZT][T088][reason]")
+	QUIT
+	;
+T089 ; token with trailing spaces in auth header after token -> 401 bad signature
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK_" "
+	SET CTX("request_id")="az089"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t089.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T089][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T089][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["b64url_char":1,1:0),1,"[MIOAUTHZT][T089][reason]")
+	QUIT
+	;
+T090 ; route with only claim requirement denies unauthenticated -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET CTX("request_id")="az090"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t090.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T090][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T090][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_missing":1,1:0),1,"[MIOAUTHZT][T090][reason]")
+	QUIT
+	;
+T091 ; route with role and claim both fail still returns 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az091"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t091.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T091][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T091][handler not ran]")
+	QUIT
+	;
+T092 ; malformed auth header without token -> 401 jwt_missing
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "
+	SET CTX("request_id")="az092"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t092.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T092][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T092][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_missing":1,1:0),1,"[MIOAUTHZT][T092][reason]")
+	QUIT
+	;
+T093 ; route owner + claim both pass -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az093"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t093.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T093][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T093][handler ran]")
+	QUIT
+	;
+T094 ; auth context fresh after public request then protected request
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/public"
+	SET CTX("request_id")="az094a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t094a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T094A][status]")
+	;
+	KILL REQ,CTX
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az094b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t094b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T094B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T094B][handler ran]")
+	QUIT
+	;
+T095 ; explicit now override with future value expires otherwise-valid token -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW+7200
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az095"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t095.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T095][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T095][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_expired":1,1:0),1,"[MIOAUTHZT][T095][reason]")
+	QUIT
+T096 ; token with only sub and issuer/audience unset -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1""}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az096"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t096.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T096][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T096][handler ran]")
+	QUIT
+	;
+T097 ; empty roles claim on non-role route still allows -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":"""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az097"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t097.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T097][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T097][handler ran]")
+	QUIT
+	;
+T098 ; route role required and roles claim omitted -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az098"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t098.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T098][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T098][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T098][reason]")
+	QUIT
+	;
+T099 ; claim present but route expects different empty/non-empty -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.note")="x"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""note"":"""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az099"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t099.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T099][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T099][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:note":1,1:0),1,"[MIOAUTHZT][T099][reason]")
+	QUIT
+	;
+T100 ; path route metadata survives multiple compile calls
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az100"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t100.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T100][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T100][handler ran]")
+	QUIT
+	;
+T101 ; wrong method on protected route should not accidentally authorize matched path
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("POST","/secure-post","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure-post"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az101"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t101.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT'["200":1,1:0),1,"[MIOAUTHZT][T101][not ok]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T101][handler not ran]")
+	QUIT
+	;
+T102 ; token with valid signature and extra dot in header value -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX,ERR
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")_"."
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az102"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t102.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T102][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T102][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T102][reason]")
+	QUIT
+	;
+T103 ; claim names do not collide with sub population
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.sub")="u1"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az103"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t103.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T103][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T103][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","sub")),"u1","[MIOAUTHZT][T103][sub]")
+	QUIT
+	;
+T104 ; owner check with slash-free unusual chars underscore exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u_1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u_1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az104"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t104.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T104][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T104][handler ran]")
+	QUIT
+	;
+T105 ; good token reused after prior deny still passes with fresh context
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	; first deny
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az105a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t105a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T105A][status]")
+	; then allow
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az105b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t105b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T105B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T105B][handler ran]")
+	QUIT
+	;
+T106 ; RS256 verifier true -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az106"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t106.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T106][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T106][handler ran]")
+	QUIT
+	;
+T107 ; RS256 verifier false -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYNO^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az107"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t107.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T107][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T107][handler not ran]")
+	QUIT
+	;
+T108 ; RS256 verifier exception -> 401 verifier exception
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYERR^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az108"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t108.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T108][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T108][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_rs256_verifier_exception":1,1:0),1,"[MIOAUTHZT][T108][reason]")
+	QUIT
+	;
+T109 ; RS256 + RBAC pass -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az109"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t109.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T109][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T109][handler ran]")
+	QUIT
+	;
+T110 ; RS256 + RBAC deny -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az110"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t110.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T110][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T110][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T110][reason]")
+	QUIT
+	;
+T111 ; RS256 + owner pass -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az111"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t111.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T111][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T111][handler ran]")
+	QUIT
+	;
+T112 ; RS256 + owner deny -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u2"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az112"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t112.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T112][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T112][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T112][reason]")
+	QUIT
+	;
+T113 ; RS256 verifier bad entry format -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="BADENTRY"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az113"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t113.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T113][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T113][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_rs256_bad_verifier":1,1:0),1,"[MIOAUTHZT][T113][reason]")
+	QUIT
+	;
+T114 ; RS256 verifier illegal identifier entry -> 401
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="BAD-TAG^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az114"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t114.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T114][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T114][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_rs256_bad_verifier":1,1:0),1,"[MIOAUTHZT][T114][reason]")
+	QUIT
+	;
+T115 ; RS256 verifier true plus claim requirement pass -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az115"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t115.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T115][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T115][handler ran]")
+	QUIT
+T116 ; repeated successful dispatches with same valid HS256 token -> 200 both times
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az116a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t116a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T116A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T116A][handler ran]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az116b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t116b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T116B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T116B][handler ran]")
+	QUIT
+	;
+T117 ; repeated denied dispatches with same bad-signature token -> 401 both times
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")="wrongsecret"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az117a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t117a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["401":1,1:0),1,"[MIOAUTHZT][T117A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T117A][handler not ran]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az117b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t117b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T117B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T117B][handler not ran]")
+	QUIT
+	;
+T118 ; HS256 token on RS256-only config without verifier -> 401 jwt_alg_unsupported or jwt_rs256_no_verifier not triggered
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	; no HS256 restriction in config, routine should still use header alg path
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az118"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t118.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T118][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T118][handler ran]")
+	QUIT
+	;
+T119 ; token with sub only reused across owner route mismatch then match
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u2"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az119a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t119a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T119A][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T119A][handler not ran]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az119b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t119b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T119B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T119B][handler ran]")
+	QUIT
+	;
+T120 ; custom rolesClaim and unrelated default roles claim present -> custom wins
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""groups"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az120"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t120.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T120][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T120][handler ran]")
+	QUIT
+	;
+T121 ; malformed payload JSON with valid header and signature still 401 on every attempt
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET HJSON="{""alg"":""HS256"",""typ"":""JWT""}"
+	SET PJSON="{""sub"":"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET DATA=H64_"."_P64
+	SET SIG=$$HMACSHA256^MIOAUTHJWT(DATA,SECRET,.ERR)
+	SET TOK=DATA_"."_$$B64EURL^MIOAUTHJWT(SIG)
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az121a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t121a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["401":1,1:0),1,"[MIOAUTHZT][T121A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az121b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t121b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T121B][status]")
+	QUIT
+	;
+T122 ; route requiring empty-string role name is effectively unsatisfied -> 403
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")=","
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az122"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t122.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T122][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T122][handler not ran]")
+	QUIT
+	;
+T123 ; claim with punctuation exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.tag")="a-b_c.1"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""tag"":""a-b_c.1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az123"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t123.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T123][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T123][handler ran]")
+	QUIT
+	;
+T124 ; protected route with RS256 valid then HS256 valid in same config session
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az124a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t124a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T124A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az124b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t124b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T124B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T124B][handler ran]")
+	QUIT
+	;
+T125 ; same valid token on two different protected routes with different policies
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/a","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="sales"
+	DO ADDM^MIOROUTE("GET","/b","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/a"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az125a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t125a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T125A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/b"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az125b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t125b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T125B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T125B][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT2["claim_mismatch:department":1,1:0),1,"[MIOAUTHZT][T125B][reason]")
+	QUIT
+T126 ; multiple extra claims preserved in auth claim map -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""a"":""1"",""b"":""2"",""c"":""3"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az126"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t126.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T126][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T126][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","claim","a")),"1","[MIOAUTHZT][T126][claim a]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","claim","b")),"2","[MIOAUTHZT][T126][claim b]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","claim","c")),"3","[MIOAUTHZT][T126][claim c]")
+	QUIT
+	;
+T127 ; same route protected then metadata changed after RESET to public
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/flip","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	DO RESET
+	KILL META
+	DO ADDM^MIOROUTE("GET","/flip","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/flip"
+	SET CTX("request_id")="az127"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t127.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T127][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T127][handler ran]")
+	QUIT
+	;
+T128 ; owner check with long identifier exact match -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET LONGID="user-1234567890-abcdef"
+	SET TOK=$$MKJWT(SECRET,"{""sub"":"""_LONGID_""",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/"_LONGID
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az128"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t128.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T128][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T128][handler ran]")
+	QUIT
+	;
+T129 ; role deny does not populate handler status 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az129"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t129.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($GET(CTX("status")),403,"[MIOAUTHZT][T129][ctx status]")
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),0,"[MIOAUTHZT][T129][not 200]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T129][handler not ran]")
+	QUIT
+	;
+T130 ; claim mismatch deny does not remove auth ok marker
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az130"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t130.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($GET(CTX("auth","ok")),1,"[MIOAUTHZT][T130][auth ok kept]")
+	DO EQ^MIOTASSERT($GET(CTX("status")),403,"[MIOAUTHZT][T130][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T130][handler not ran]")
+	QUIT
+	;
+T131 ; public route after denied protected route stays public
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	KILL META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az131a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t131a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T131A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/public"
+	SET CTX("request_id")="az131b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t131b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T131B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T131B][handler ran]")
+	QUIT
+	;
+T132 ; issuer enforced while audience empty only checks issuer
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")="iss-1"
+	SET CONF("auth","jwt","audience")=""
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""iss-1"",""aud"":""anything"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az132"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t132.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T132][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T132][handler ran]")
+	QUIT
+	;
+T133 ; audience enforced while issuer empty only checks audience
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")=""
+	SET CONF("auth","jwt","audience")="aud-1"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""iss"":""anything"",""aud"":""aud-1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az133"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t133.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T133][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T133][handler ran]")
+	QUIT
+	;
+T134 ; same valid token under different now override can pass then expire
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+10)_"}")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","now")=NOW
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az134a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t134a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T134A][status]")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","now")=NOW+11
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az134b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t134b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T134B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T134B][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT2["jwt_expired":1,1:0),1,"[MIOAUTHZT][T134B][reason]")
+	QUIT
+	;
+T135 ; claim and role both pass on one route then different route denies on role only
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/r1","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	DO ADDM^MIOROUTE("GET","/r2","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/r1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az135a"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t135a.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T135A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET"
+	SET REQ("path")="/r2"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az135b"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t135b.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T135B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T135B][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT2["role_required":1,1:0),1,"[MIOAUTHZT][T135B][reason]")
+	QUIT
+T136 ; same token across three routes with pass, deny, pass
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/a","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/b","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/c","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/a",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az136a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t136a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T136A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/b",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az136b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t136b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T136B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T136B][handler not ran]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/c",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az136c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t136c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T136C][status]")
+	QUIT
+	;
+T137 ; empty custom bearer prefix with malformed raw token -> 401 jwt_format
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","bearerPrefix")=""
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="abc.def"
+	SET CTX("request_id")="az137"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t137.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T137][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T137][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T137][reason]")
+	QUIT
+	;
+T138 ; claim name with mixed case exact match
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.DepartmentCode")="A1"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""DepartmentCode"":""A1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az138"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t138.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T138][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T138][handler ran]")
+	QUIT
+	;
+T139 ; claim name case mismatch denies
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.departmentcode")="A1"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""DepartmentCode"":""A1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az139"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t139.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T139][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T139][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["claim_mismatch:departmentcode":1,1:0),1,"[MIOAUTHZT][T139][reason]")
+	QUIT
+	;
+T140 ; roles claim contains spaces only -> 403 role_required
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""   "",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az140"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t140.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T140][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T140][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T140][reason]")
+	QUIT
+	;
+T141 ; two owner routes same token one pass one deny
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/doc/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/item/u1",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az141a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t141a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T141A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/doc/u2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az141b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t141b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T141B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T141B][handler not ran]")
+	QUIT
+	;
+T142 ; token without sub fails owner route but still authenticates
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/item/u1"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az142"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t142.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($GET(CTX("auth","ok")),1,"[MIOAUTHZT][T142][auth ok]")
+	DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T142][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T142][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T142][reason]")
+	QUIT
+	;
+T143 ; issuer mismatch on RS256 verifier-true still denies at claim check
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")="iss-ok"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""iss"":""iss-bad"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az143"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t143.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T143][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T143][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_issuer":1,1:0),1,"[MIOAUTHZT][T143][reason]")
+	QUIT
+	;
+T144 ; audience mismatch on RS256 verifier-true still denies at claim check
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","audience")="aud-ok"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""aud"":""aud-bad"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/secure"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az144"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t144.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T144][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T144][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_audience":1,1:0),1,"[MIOAUTHZT][T144][reason]")
+	QUIT
+	;
+T145 ; same good token reused after RS256 verifier exception route does not poison HS256
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/hs","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/rs","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYERR^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/rs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az145a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t145a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["401":1,1:0),1,"[MIOAUTHZT][T145A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/hs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az145b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t145b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T145B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T145B][handler ran]")
+	QUIT
+T146 ; five-step mixed sequence preserves isolation across public/deny/allow
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	; 1 public
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/public"
+	SET CTX("request_id")="az146a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t146a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T146A][status]")
+	;
+	; 2 deny
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az146b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t146b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T146B][status]")
+	;
+	; 3 allow
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az146c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t146c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T146C][status]")
+	;
+	; 4 public again
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/public"
+	SET CTX("request_id")="az146d",CTX("ran")=0
+	SET OP="tmp/mio_authz_t146d.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT4)
+	DO EQ^MIOTASSERT($SELECT(OUT4["200":1,1:0),1,"[MIOAUTHZT][T146D][status]")
+	;
+	; 5 malformed token
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az146e",CTX("ran")=0
+	SET OP="tmp/mio_authz_t146e.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT5)
+	DO EQ^MIOTASSERT($SELECT(OUT5["401":1,1:0),1,"[MIOAUTHZT][T146E][status]")
+	QUIT
+	;
+T147 ; same HS256 token across GET/POST protected routes with different claim policies
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/multi","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="sales"
+	DO ADDM^MIOROUTE("POST","/multi","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/multi",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az147a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t147a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T147A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="POST",REQ("path")="/multi",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az147b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t147b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T147B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T147B][handler not ran]")
+	QUIT
+	;
+T148 ; two different rolesClaim configs in same session behave independently
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/g","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/r","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""groups"":""admin"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/g",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az148a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t148a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T148A][status]")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET REQ("method")="GET",REQ("path")="/r",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az148b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t148b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T148B][status]")
+	QUIT
+	;
+T149 ; same request path after RESET to different route metadata uses new metadata only
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.kind")="one"
+	DO ADDM^MIOROUTE("GET","/swap","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	DO RESET
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.kind")="two"
+	DO ADDM^MIOROUTE("GET","/swap","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""kind"":""two"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/swap",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az149",CTX("ran")=0
+	SET OP="tmp/mio_authz_t149.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T149][status]")
+	QUIT
+	;
+T150 ; owner route with exact empty ownerParam name metadata behaves as deny
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")=""
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/item/u2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az150",CTX("ran")=0
+	SET OP="tmp/mio_authz_t150.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T150][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T150][handler ran]")
+	QUIT
+	;
+T151 ; roles metadata empty string does not enforce RBAC
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")=""
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az151",CTX("ran")=0
+	SET OP="tmp/mio_authz_t151.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T151][status]")
+	QUIT
+	;
+T152 ; claim metadata only with no auth header on public route remains public
+	DO RESET
+	NEW META
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/public-ish","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET",REQ("path")="/public-ish"
+	SET CTX("request_id")="az152",CTX("ran")=0
+	SET OP="tmp/mio_authz_t152.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T152][status]")
+	QUIT
+	;
+T153 ; RS256 success followed by HS256 deny with same route metadata
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az153a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t153a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T153A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az153b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t153b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T153B][status]")
+	QUIT
+	;
+T154 ; future now override on RS256 token expires it too
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET CONF("auth","jwt","now")=NOW+7200
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az154",CTX("ran")=0
+	SET OP="tmp/mio_authz_t154.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T154][status]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_expired":1,1:0),1,"[MIOAUTHZT][T154][reason]")
+	QUIT
+	;
+T155 ; many-claim token still enforces exact selected claim only
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.target")="yes"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""a"":""1"",""b"":""2"",""c"":""3"",""target"":""yes"",""d"":""4"",""e"":""5"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az155",CTX("ran")=0
+	SET OP="tmp/mio_authz_t155.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T155][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T155][handler ran]")
+	QUIT
+T156 ; long mixed session: public -> HS allow -> HS deny -> public -> HS allow
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/public"
+	SET CTX("request_id")="az156a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t156a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T156A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az156b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t156b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T156B][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az156c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t156c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T156C][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/public"
+	SET CTX("request_id")="az156d",CTX("ran")=0
+	SET OP="tmp/mio_authz_t156d.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT4)
+	DO EQ^MIOTASSERT($SELECT(OUT4["200":1,1:0),1,"[MIOAUTHZT][T156D][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u2"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az156e",CTX("ran")=0
+	SET OP="tmp/mio_authz_t156e.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT5)
+	DO EQ^MIOTASSERT($SELECT(OUT5["200":1,1:0),1,"[MIOAUTHZT][T156E][status]")
+	QUIT
+	;
+T157 ; long mixed session: claim pass -> claim deny -> role deny -> claim pass
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/claim","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/role","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/claim",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az157a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t157a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T157A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/claim",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az157b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t157b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T157B][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/role",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az157c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t157c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T157C][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/claim",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az157d",CTX("ran")=0
+	SET OP="tmp/mio_authz_t157d.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT4)
+	DO EQ^MIOTASSERT($SELECT(OUT4["200":1,1:0),1,"[MIOAUTHZT][T157D][status]")
+	QUIT
+	;
+T158 ; long owner session: deny -> pass -> deny with same config
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/item/u2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az158a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t158a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T158A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/item/u1",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az158b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t158b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T158B][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/item/u3",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az158c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t158c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T158C][status]")
+	QUIT
+	;
+T159 ; HS and RS routes in one session, both pass independently
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/hs","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/rs","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/hs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az159a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t159a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T159A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/rs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az159b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t159b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T159B][status]")
+	QUIT
+	;
+T160 ; HS allow then RS verifier exception then HS allow again
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/hs","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/rs","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYERR^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/hs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az160a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t160a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T160A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/rs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az160b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t160b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T160B][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u2"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/hs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az160c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t160c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T160C][status]")
+	QUIT
+	;
+T161 ; now override sequence for one token: pass, pass, expire
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET BASE=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(BASE+2)_"}")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","now")=BASE
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az161a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t161a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T161A][status]")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","now")=BASE+2
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az161b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t161b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T161B][status]")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","now")=BASE+3
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az161c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t161c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["401":1,1:0),1,"[MIOAUTHZT][T161C][status]")
+	QUIT
+	;
+T162 ; claim exactness across three similar values
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.code")="abc"
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""code"":""abc"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az162a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t162a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T162A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""code"":""abc "",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az162b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t162b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T162B][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""code"":""Abc"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az162c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t162c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T162C][status]")
+	QUIT
+	;
+T163 ; route set with three methods same path uses correct metadata per method
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/tri","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	DO ADDM^MIOROUTE("POST","/tri","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("PUT","/tri","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/tri",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az163a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t163a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T163A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="POST",REQ("path")="/tri",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az163b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t163b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T163B][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="PUT",REQ("path")="/tri",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az163c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t163c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T163C][status]")
+	QUIT
+	;
+T164 ; malformed RS256 token still format-fails before verifier config matters
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/secure","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET",REQ("path")="/secure",REQ("hdr","authorization")="Bearer abc.def"
+	SET CTX("request_id")="az164",CTX("ran")=0
+	SET OP="tmp/mio_authz_t164.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T164][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T164][handler not ran]")
+	DO EQ^MIOTASSERT($SELECT(OUT["jwt_format":1,1:0),1,"[MIOAUTHZT][T164][reason]")
+	QUIT
+	;
+T165 ; final mixed invariant: deny does not stop later protected success on different route
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/r1","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/r2","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/r1",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az165a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t165a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T165A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/r2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az165b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t165b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T165B][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T165B][handler ran]")
+	QUIT
+T166 ; looped stable protected success over 5 dispatches
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/stable","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	NEW I
+	FOR I=1:1:5 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/stable",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az166-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t166-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T166]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T166]["_I_"][handler ran]")
+	QUIT
+	;
+T167 ; looped stable RBAC deny over 5 dispatches
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/rbacdeny","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	NEW I
+	FOR I=1:1:5 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/rbacdeny",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az167-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t167-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T167]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T167]["_I_"][handler not ran]")
+	. DO EQ^MIOTASSERT($SELECT(OUT["role_required":1,1:0),1,"[MIOAUTHZT][T167]["_I_"][reason]")
+	QUIT
+	;
+T168 ; looped stable ABAC deny over 5 dispatches
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/abac/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	NEW I
+	FOR I=1:1:5 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/abac/u2",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az168-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t168-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["403":1,1:0),1,"[MIOAUTHZT][T168]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T168]["_I_"][handler not ran]")
+	. DO EQ^MIOTASSERT($SELECT(OUT["not_owner":1,1:0),1,"[MIOAUTHZT][T168]["_I_"][reason]")
+	QUIT
+	;
+T169 ; alternating valid and malformed HS256 requests in one loop
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/alt","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET GOOD=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	NEW I,TOK,EXPECT
+	FOR I=1:1:6 DO
+	. KILL REQ,CTX
+	. IF I#2 SET TOK=GOOD,EXPECT=200
+	. ELSE  SET TOK="abc.def",EXPECT=401
+	. SET REQ("method")="GET",REQ("path")="/alt",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az169-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t169-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT:1,1:0),1,"[MIOAUTHZT][T169]["_I_"][status]")
+	QUIT
+	;
+T170 ; long claim token reused across three claim routes with selective pass/deny
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.a")="1"
+	DO ADDM^MIOROUTE("GET","/ca","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.b")="2"
+	DO ADDM^MIOROUTE("GET","/cb","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.z")="9"
+	DO ADDM^MIOROUTE("GET","/cz","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""a"":""1"",""b"":""2"",""c"":""3"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/ca",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az170a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t170a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T170A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/cb",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az170b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t170b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T170B][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/cz",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az170c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t170c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T170C][status]")
+	QUIT
+	;
+T171 ; repeated public requests with junk auth header remain public
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/pubjunk","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	NEW I
+	FOR I=1:1:5 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/pubjunk",REQ("hdr","authorization")="Bearer abc.def"
+	. SET CTX("request_id")="az171-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t171-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T171]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T171]["_I_"][handler ran]")
+	QUIT
+	;
+T172 ; two HS256 configs with different secrets in same test isolate correctly
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/iso","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF1,CONF2,REQ,CTX
+	SET CONF1("auth","protectMode")="route"
+	SET CONF1("auth","mode")="jwt"
+	SET CONF1("auth","jwt","hmacSecret")="s1"
+	DO ENSURE^MIOMW(.CONF1)
+	SET CONF2("auth","protectMode")="route"
+	SET CONF2("auth","mode")="jwt"
+	SET CONF2("auth","jwt","hmacSecret")="s2"
+	DO ENSURE^MIOMW(.CONF2)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK1=$$MKJWT("s1","{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET TOK2=$$MKJWT("s2","{""sub"":""u2"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/iso",REQ("hdr","authorization")="Bearer "_TOK1
+	SET CTX("request_id")="az172a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t172a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF1,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T172A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/iso",REQ("hdr","authorization")="Bearer "_TOK1
+	SET CTX("request_id")="az172b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t172b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF2,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["401":1,1:0),1,"[MIOAUTHZT][T172B][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/iso",REQ("hdr","authorization")="Bearer "_TOK2
+	SET CTX("request_id")="az172c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t172c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF2,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T172C][status]")
+	QUIT
+	;
+T173 ; multiple role routes in one session use same parsed roles map correctly
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/ra","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	DO ADDM^MIOROUTE("GET","/rm","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin,manager"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/ra",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az173a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t173a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T173A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/rm",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az173b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t173b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T173B][status]")
+	QUIT
+	;
+T174 ; repeated malformed header path does not create stale auth state
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/nostale","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	NEW I
+	FOR I=1:1:4 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/nostale",REQ("hdr","authorization")="Bearer abc.def"
+	. SET CTX("request_id")="az174-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t174-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T174]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("auth","ok"),0),0,"[MIOAUTHZT][T174]["_I_"][no auth ok]")
+	QUIT
+	;
+T175 ; final session mix across HS pass, RS pass, HS deny, owner pass, public pass
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/hs","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/rs","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/deny","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/item/:id","HOK^MIOAUTHZT",.META)
+	KILL META
+	DO ADDM^MIOROUTE("GET","/public","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/hs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az175a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t175a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T175A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/rs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az175b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t175b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T175B][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/deny",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az175c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t175c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["403":1,1:0),1,"[MIOAUTHZT][T175C][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/item/u1",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az175d",CTX("ran")=0
+	SET OP="tmp/mio_authz_t175d.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT4)
+	DO EQ^MIOTASSERT($SELECT(OUT4["200":1,1:0),1,"[MIOAUTHZT][T175D][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/public"
+	SET CTX("request_id")="az175e",CTX("ran")=0
+	SET OP="tmp/mio_authz_t175e.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT5)
+	DO EQ^MIOTASSERT($SELECT(OUT5["200":1,1:0),1,"[MIOAUTHZT][T175E][status]")
+	QUIT
+T176 ; table-driven RBAC matrix: admin pass, manager pass, user deny
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin,manager"
+	DO ADDM^MIOROUTE("GET","/mxr","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	NEW I,ROLE,EXPECT,TOK
+	SET ROLE(1)="admin",EXPECT(1)=200
+	SET ROLE(2)="manager",EXPECT(2)=200
+	SET ROLE(3)="user",EXPECT(3)=403
+	FOR I=1:1:3 DO
+	. KILL REQ,CTX
+	. SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":"""_ROLE(I)_""",""exp"":"_(NOW+3600)_"}")
+	. SET REQ("method")="GET",REQ("path")="/mxr",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az176-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t176-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT(I):1,1:0),1,"[MIOAUTHZT][T176]["_I_"][status]")
+	QUIT
+	;
+T177 ; table-driven claim matrix exactness
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.code")="A-1"
+	DO ADDM^MIOROUTE("GET","/mxc","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	NEW I,VAL,EXPECT,TOK
+	SET VAL(1)="A-1",EXPECT(1)=200
+	SET VAL(2)="A-1 ",EXPECT(2)=403
+	SET VAL(3)="a-1",EXPECT(3)=403
+	FOR I=1:1:3 DO
+	. KILL REQ,CTX
+	. SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""code"":"""_VAL(I)_""",""exp"":"_(NOW+3600)_"}")
+	. SET REQ("method")="GET",REQ("path")="/mxc",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az177-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t177-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT(I):1,1:0),1,"[MIOAUTHZT][T177]["_I_"][status]")
+	QUIT
+	;
+T178 ; table-driven owner matrix exact and non-exact ids
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/mxo/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	NEW I,SUB,PATH,EXPECT,TOK
+	SET SUB(1)="u1",PATH(1)="/mxo/u1",EXPECT(1)=200
+	SET SUB(2)="u1",PATH(2)="/mxo/u2",EXPECT(2)=403
+	SET SUB(3)="001",PATH(3)="/mxo/1",EXPECT(3)=403
+	FOR I=1:1:3 DO
+	. KILL REQ,CTX
+	. SET TOK=$$MKJWT(SECRET,"{""sub"":"""_SUB(I)_""",""exp"":"_(NOW+3600)_"}")
+	. SET REQ("method")="GET",REQ("path")=PATH(I),REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az178-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t178-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT(I):1,1:0),1,"[MIOAUTHZT][T178]["_I_"][status]")
+	QUIT
+	;
+T179 ; table-driven malformed token matrix
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/mxf","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	NEW I,TOK
+	SET TOK(1)="abc.def"
+	SET TOK(2)="a.b.c.d"
+	SET TOK(3)="abc..def"
+	SET TOK(4)="abc$.def.ghi"
+	FOR I=1:1:4 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")="/mxf",REQ("hdr","authorization")="Bearer "_TOK(I)
+	. SET CTX("request_id")="az179-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t179-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["401":1,1:0),1,"[MIOAUTHZT][T179]["_I_"][status]")
+	. DO EQ^MIOTASSERT($GET(CTX("ran")),0,"[MIOAUTHZT][T179]["_I_"][handler not ran]")
+	QUIT
+	;
+T180 ; rotate now override across same token around expiry boundary
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/mxn","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","clockSkewSeconds")=0
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET BASE=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(BASE+1)_"}")
+	NEW I,CUR,EXPECT
+	SET CUR(1)=BASE,EXPECT(1)=200
+	SET CUR(2)=BASE+1,EXPECT(2)=200
+	SET CUR(3)=BASE+2,EXPECT(3)=401
+	FOR I=1:1:3 DO
+	. KILL REQ,CTX
+	. SET CONF("auth","jwt","now")=CUR(I)
+	. SET REQ("method")="GET",REQ("path")="/mxn",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az180-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t180-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT(I):1,1:0),1,"[MIOAUTHZT][T180]["_I_"][status]")
+	QUIT
+	;
+T181 ; mixed-route matrix with one token and alternating methods
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/mxm","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("POST","/mxm","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/mxm",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az181a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t181a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T181A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="POST",REQ("path")="/mxm",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az181b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t181b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T181B][status]")
+	QUIT
+	;
+T182 ; HS/RS alternating success matrix in one config session
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/mxalg","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	NEW I,TOK
+	FOR I=1:1:4 DO
+	. KILL REQ,CTX
+	. IF I#2 SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	. ELSE  SET TOK=$$MKRSJWT("{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	. SET REQ("method")="GET",REQ("path")="/mxalg",REQ("hdr","authorization")="Bearer "_TOK
+	. SET CTX("request_id")="az182-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t182-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T182]["_I_"][status]")
+	QUIT
+	;
+T183 ; RS256 matrix: pass, RBAC deny, issuer deny
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/mxrs","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/mxrs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az183a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t183a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T183A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/mxrs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az183b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t183b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["403":1,1:0),1,"[MIOAUTHZT][T183B][status]")
+	;
+	KILL REQ,CTX
+	SET CONF("auth","jwt","issuer")="iss-ok"
+	SET TOK=$$MKRSJWT("{""sub"":""u1"",""roles"":""admin"",""iss"":""iss-bad"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/mxrs",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az183c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t183c.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["401":1,1:0),1,"[MIOAUTHZT][T183C][status]")
+	QUIT
+	;
+T184 ; stale deny cannot poison later owner pass with same token family
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/mxowner/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/mxowner/u2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az184a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t184a.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["403":1,1:0),1,"[MIOAUTHZT][T184A][status]")
+	;
+	KILL REQ,CTX
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""u2"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET",REQ("path")="/mxowner/u2",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az184b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t184b.out" OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T184B][status]")
+	QUIT
+	;
+T185 ; final table-driven mixed matrix over three token kinds and two routes
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/mxfinal1","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/mxfinal2","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	NEW I,PATH,TOK,EXPECT
+	SET PATH(1)="/mxfinal1",EXPECT(1)=200,TOK(1)=$$MKJWT(SECRET,"{""sub"":""u1"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	SET PATH(2)="/mxfinal1",EXPECT(2)=403,TOK(2)=$$MKRSJWT("{""sub"":""u1"",""roles"":""user"",""exp"":"_(NOW+3600)_"}")
+	SET PATH(3)="/mxfinal2",EXPECT(3)=200,TOK(3)=$$MKRSJWT("{""sub"":""u1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET PATH(4)="/mxfinal2",EXPECT(4)=403,TOK(4)=$$MKJWT(SECRET,"{""sub"":""u1"",""department"":""sales"",""exp"":"_(NOW+3600)_"}")
+	FOR I=1:1:4 DO
+	. KILL REQ,CTX
+	. SET REQ("method")="GET",REQ("path")=PATH(I),REQ("hdr","authorization")="Bearer "_TOK(I)
+	. SET CTX("request_id")="az185-"_I,CTX("ran")=0
+	. SET OP="tmp/mio_authz_t185-"_I_".out"
+	. OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	. DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX) CLOSE DEV USE $PRINCIPAL
+	. DO READALL(OP,.OUT)
+	. DO EQ^MIOTASSERT($SELECT(OUT[EXPECT(I):1,1:0),1,"[MIOAUTHZT][T185]["_I_"][status]")
+	QUIT
+T186 ; normal secure page with basic authenticated user -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/dashboard","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""user-1"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/dashboard"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az186"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t186.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T186][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T186][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","sub")),"user-1","[MIOAUTHZT][T186][sub]")
+	QUIT
+T187 ; admin-only settings page with admin role -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/settings","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""admin-1"",""roles"":""admin,user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/settings"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az187"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t187.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T187][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T187][handler ran]")
+	DO EQ^MIOTASSERT($GET(CTX("auth","roles","admin")),1,"[MIOAUTHZT][T187][admin role]")
+	QUIT
+	;
+T188 ; manager report route with any-of role list -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin,manager"
+	DO ADDM^MIOROUTE("GET","/reports","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""mgr-1"",""roles"":""manager"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/reports"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az188"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t188.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T188][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T188][handler ran]")
+	QUIT
+	;
+T189 ; department-scoped page for billing user -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("claims.department")="billing"
+	DO ADDM^MIOROUTE("GET","/billing/home","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""bill-1"",""department"":""billing"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/billing/home"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az189"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t189.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T189][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T189][handler ran]")
+	QUIT
+	;
+T190 ; owner can view own profile -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/profile/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""user-55"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/profile/user-55"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az190"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t190.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T190][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T190][handler ran]")
+	QUIT
+	;
+T191 ; owner plus department requirement both satisfied -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	SET META("claims.department")="support"
+	DO ADDM^MIOROUTE("GET","/tickets/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""agent-7"",""department"":""support"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/tickets/agent-7"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az191"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t191.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T191][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T191][handler ran]")
+	QUIT
+	;
+T192 ; POST create route for authenticated user -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("POST","/posts","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""writer-3"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="POST"
+	SET REQ("path")="/posts"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az192"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t192.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T192][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T192][handler ran]")
+	QUIT
+	;
+T193 ; alternate roles claim groups for admin route -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/groups-admin","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="groups"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""gadmin-1"",""groups"":""staff,admin"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/groups-admin"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az193"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t193.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T193][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T193][handler ran]")
+	QUIT
+	;
+T194 ; issuer and audience both configured and matched -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/oidc","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","issuer")="https://issuer.example"
+	SET CONF("auth","jwt","audience")="mio-web"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""oidc-user"",""iss"":""https://issuer.example"",""aud"":""mio-web"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/oidc"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az194"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t194.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T194][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T194][handler ran]")
+	QUIT
+	;
+T195 ; same valid token reused on two normal protected pages -> 200 both
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/home","HOK^MIOAUTHZT",.META)
+	DO ADDM^MIOROUTE("GET","/account","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""user-xy"",""exp"":"_(NOW+3600)_"}")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/home",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az195a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t195a.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T195A][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/account",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az195b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t195b.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T195B][status]")
+	QUIT
+	;
+T196 ; support manager route requiring both role and department -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	SET META("roles")="manager"
+	SET META("claims.department")="support"
+	DO ADDM^MIOROUTE("GET","/support/manage","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""supmgr-1"",""roles"":""manager"",""department"":""support"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/support/manage"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az196"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t196.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T196][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T196][handler ran]")
+	QUIT
+	;
+T197 ; RS256 normal authenticated page with verifier stub -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/rs-home","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rs256Verify")="VRFYOK^MIOAUTHZT"
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKRSJWT("{""sub"":""rs-user"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/rs-home"
+	SET REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az197"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t197.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T197][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T197][handler ran]")
+	QUIT
+	;
+T198 ; public landing page with auth mode enabled but no header -> 200
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/landing","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	DO ENSURE^MIOMW(.CONF)
+	SET REQ("method")="GET"
+	SET REQ("path")="/landing"
+	SET CTX("request_id")="az198"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t198.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T198][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T198][handler ran]")
+	QUIT
+	;
+T199 ; member area with custom bearer prefix Token -> 200
+	DO RESET
+	NEW META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/member","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF,REQ,CTX
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","bearerPrefix")="Token "
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""member-77"",""exp"":"_(NOW+3600)_"}")
+	SET REQ("method")="GET"
+	SET REQ("path")="/member"
+	SET REQ("hdr","authorization")="Token "_TOK
+	SET CTX("request_id")="az199"
+	SET CTX("ran")=0
+	SET OP="tmp/mio_authz_t199.out"
+	OPEN OP:(newversion:stream:nowrap)
+	SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT)
+	DO EQ^MIOTASSERT($SELECT(OUT["200":1,1:0),1,"[MIOAUTHZT][T199][status]")
+	DO EQ^MIOTASSERT($GET(CTX("ran")),1,"[MIOAUTHZT][T199][handler ran]")
+	QUIT
+	;
+T200 ; normal mixed session of public, secure, admin, owner, public
+	DO RESET
+	NEW META
+	DO ADDM^MIOROUTE("GET","/welcome","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	DO ADDM^MIOROUTE("GET","/me","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("roles")="admin"
+	DO ADDM^MIOROUTE("GET","/admin","HOK^MIOAUTHZT",.META)
+	KILL META
+	SET META("authRequired")=1
+	SET META("ownerParam")="id"
+	SET META("ownerClaim")="sub"
+	DO ADDM^MIOROUTE("GET","/users/:id","HOK^MIOAUTHZT",.META)
+	DO COMPILE^MIOROUTE
+	KILL CONF
+	SET CONF("auth","protectMode")="route"
+	SET CONF("auth","mode")="jwt"
+	SET CONF("auth","jwt","rolesClaim")="roles"
+	SET SECRET="s3cr3t"
+	SET CONF("auth","jwt","hmacSecret")=SECRET
+	DO ENSURE^MIOMW(.CONF)
+	SET NOW=$$NOWS^MIOAUTHJWT()
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/welcome"
+	SET CTX("request_id")="az200a",CTX("ran")=0
+	SET OP="tmp/mio_authz_t200a.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT1)
+	DO EQ^MIOTASSERT($SELECT(OUT1["200":1,1:0),1,"[MIOAUTHZT][T200A][status]")
+	;
+	SET TOK=$$MKJWT(SECRET,"{""sub"":""user-200"",""roles"":""admin"",""exp"":"_(NOW+3600)_"}")
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/me",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az200b",CTX("ran")=0
+	SET OP="tmp/mio_authz_t200b.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT2)
+	DO EQ^MIOTASSERT($SELECT(OUT2["200":1,1:0),1,"[MIOAUTHZT][T200B][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/admin",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az200c",CTX("ran")=0
+	SET OP="tmp/mio_authz_t200c.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT3)
+	DO EQ^MIOTASSERT($SELECT(OUT3["200":1,1:0),1,"[MIOAUTHZT][T200C][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/users/user-200",REQ("hdr","authorization")="Bearer "_TOK
+	SET CTX("request_id")="az200d",CTX("ran")=0
+	SET OP="tmp/mio_authz_t200d.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT4)
+	DO EQ^MIOTASSERT($SELECT(OUT4["200":1,1:0),1,"[MIOAUTHZT][T200D][status]")
+	;
+	KILL REQ,CTX
+	SET REQ("method")="GET",REQ("path")="/welcome"
+	SET CTX("request_id")="az200e",CTX("ran")=0
+	SET OP="tmp/mio_authz_t200e.out"
+	OPEN OP:(newversion:stream:nowrap) SET DEV=OP USE DEV
+	DO DISPATCH^MIOROUTE(.DEV,.CONF,.REQ,.CTX)
+	CLOSE DEV USE $PRINCIPAL
+	DO READALL(OP,.OUT5)
+	DO EQ^MIOTASSERT($SELECT(OUT5["200":1,1:0),1,"[MIOAUTHZT][T200E][status]")
+	QUIT
+; ---- handler ----
+HOK(DEV,CONF,REQ,CTX)
+	SET CTX("ran")=1
+	NEW OBJ
+	SET OBJ("ok")=1
+	SET OBJ("sub")=$GET(CTX("auth","sub"))
+	SET OBJ("routine")="MIOAUTHZT"
+	DO RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$GET(CTX("request_id")),.CTX)
+	SET CTX("status")=200
+	QUIT
+	;
+; ---- RS256 verifier stubs ----
+VRFYOK(DATA,SIGBIN,CONF,CTX,HOBJ,POBJ,ERR)
+	QUIT 1
+	;
+VRFYNO(DATA,SIGBIN,CONF,CTX,HOBJ,POBJ,ERR)
+	SET ERR("routine")="MIOAUTHJWT"
+	SET ERR("error")="jwt_bad_signature"
+	QUIT 0
+	;
+VRFYERR(DATA,SIGBIN,CONF,CTX,HOBJ,POBJ,ERR)
+	NEW X SET X=1/0
+	QUIT 0
+	;
+MKRSJWT(PJSON)
+	NEW HJSON,H64,P64,S64
+	SET HJSON="{""alg"":""RS256"",""typ"":""JWT""}"
+	SET H64=$$B64EURL^MIOAUTHJWT(HJSON)
+	SET P64=$$B64EURL^MIOAUTHJWT(PJSON)
+	SET S64=$$B64EURL^MIOAUTHJWT("sig")
+	QUIT H64_"."_P64_"."_S64

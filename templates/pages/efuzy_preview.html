@@ -1,0 +1,148 @@
+<div class="twocol">
+  <section class="space-y-4">
+    <div class="panel panel-pad">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="section-title">Job #{{job.id}}</div>
+          <div class="section-lead">{{job.fileName}}</div>
+        </div>
+        <span class="chip status-{{job.status}}">{{job.status}}</span>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div class="rounded-xl border border-work-800 px-3 py-3">
+          <div class="text-xs uppercase tracking-[0.14em] subtle">Claims</div>
+          <div class="mt-2 text-xl font-semibold">{{preview.claimCount}}</div>
+        </div>
+        <div class="rounded-xl border border-work-800 px-3 py-3">
+          <div class="text-xs uppercase tracking-[0.14em] subtle">Service Lines</div>
+          <div class="mt-2 text-xl font-semibold">{{preview.serviceLineCount}}</div>
+        </div>
+        <div class="rounded-xl border border-work-800 px-3 py-3">
+          <div class="text-xs uppercase tracking-[0.14em] subtle">Segments</div>
+          <div class="mt-2 text-xl font-semibold">{{preview.segmentCount}}</div>
+        </div>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-2">
+        <div class="rounded-xl border border-work-800 px-3 py-3">
+          <div class="text-xs uppercase tracking-[0.14em] subtle">Sender</div>
+          <div class="mt-2 font-medium">{{preview.senderId}}</div>
+        </div>
+        <div class="rounded-xl border border-work-800 px-3 py-3">
+          <div class="text-xs uppercase tracking-[0.14em] subtle">Receiver</div>
+          <div class="mt-2 font-medium">{{preview.receiverId}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Sample claim rows</div>
+      <div class="section-lead">First parsed claims from the stored working set.</div>
+      <div class="mt-4 overflow-x-auto">
+        <table class="table-compact">
+          <thead class="table-head">
+            <tr>
+              <th>Claim ID</th>
+              <th>Date</th>
+              <th>Patient</th>
+              <th>Payer</th>
+              <th>Total</th>
+              <th>Subscriber</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#preview.claims}}
+            <tr class="table-row">
+              <td>{{claim_id}}</td>
+              <td>{{claim_date}}</td>
+              <td>{{patient_name}}</td>
+              <td>{{payer_name}}</td>
+              <td>{{total_charge}}</td>
+              <td>{{subscriber_id}}</td>
+            </tr>
+            {{/preview.claims}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Sample service lines</div>
+      <div class="section-lead">First parsed service lines from the stored working set.</div>
+      <div class="mt-4 overflow-x-auto">
+        <table class="table-compact">
+          <thead class="table-head">
+            <tr>
+              <th>Claim ID</th>
+              <th>Line</th>
+              <th>Procedure</th>
+              <th>Date</th>
+              <th>Charge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#preview.lines}}
+            <tr class="table-row">
+              <td>{{claim_id}}</td>
+              <td>{{line_number}}</td>
+              <td>{{procedure_code}}</td>
+              <td>{{line_service_date}}</td>
+              <td>{{line_charge}}</td>
+            </tr>
+            {{/preview.lines}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <aside class="space-y-4">
+    <div class="panel panel-pad">
+      <div class="section-title">Run / export</div>
+      <div class="section-lead">Bind a profile and generate the output file.</div>
+      <form id="efuzyRunForm" class="mt-4 space-y-4" action="/efuzy/api/run" method="post">
+        <input type="hidden" name="jobId" value="{{job.id}}">
+        <div>
+          <label class="mb-2 block text-sm font-medium">Profile</label>
+          <select name="profileId">
+            {{#profiles}}
+            <option value="{{id}}">{{name}} · {{exportMode}}</option>
+            {{/profiles}}
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-primary" type="submit">Run export</button>
+          <a class="btn-secondary" href="{{job.exportHref}}">Download current output</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Diagnostics</div>
+      <div class="section-lead">Warnings, timing, and stored output path.</div>
+      <div class="mt-4 space-y-3 text-sm">
+        <div><span class="subtle">Created:</span> {{job.createdAt}}</div>
+        <div><span class="subtle">Started:</span> {{job.startedAt}}</div>
+        <div><span class="subtle">Ended:</span> {{job.endedAt}}</div>
+        <div><span class="subtle">Warnings:</span> {{job.warningCount}}</div>
+        <div><span class="subtle">Errors:</span> {{job.errorCount}}</div>
+        <div><span class="subtle">Output:</span> {{job.outputPath}}</div>
+      </div>
+      {{#job.warnings}}
+      <div class="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">{{text}}</div>
+      {{/job.warnings}}
+      {{#job.details}}
+      <div class="mt-3 rounded-xl border border-work-800 px-3 py-3 text-sm subtle">{{text}}</div>
+      {{/job.details}}
+    </div>
+
+    <div class="panel panel-pad">
+      <div class="section-title">Stored stats</div>
+      {{#job.stats}}
+      <div class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-work-800 px-3 py-2 text-sm">
+        <span class="subtle">{{key}}</span>
+        <span>{{value}}</span>
+      </div>
+      {{/job.stats}}
+    </div>
+  </aside>
+</div>

@@ -1,0 +1,88 @@
+<div class="twocol">
+  <section class="panel panel-pad">
+    <div class="section-title">Profile editor</div>
+    <div class="section-lead">Save presets for CSV structure, delimiter, quoting, and output naming.</div>
+    <form class="mt-5 space-y-4" action="/efuzy/api/profile/save" method="post">
+      <input type="hidden" name="id" value="{{profile.id}}">
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-sm font-medium">Profile name</label>
+          <input type="text" name="name" value="{{profile.name}}">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium">Workflow type</label>
+          <input type="text" name="workflowType" value="{{profile.workflowType}}">
+        </div>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-sm font-medium">Export mode</label>
+          <select name="exportMode">
+            {{#maps.modes}}
+            <option value="{{id}}">{{label}}</option>
+            {{/maps.modes}}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium">Row source</label>
+          <select name="rowSource">
+            <option value="claim">claim</option>
+            <option value="line">line</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium">Selected fields</label>
+        <textarea rows="4" name="selectedFields">{{profile.selectedFieldsText}}</textarea>
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium">Field order</label>
+        <textarea rows="4" name="fieldOrder">{{profile.fieldOrderText}}</textarea>
+      </div>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div>
+          <label class="mb-2 block text-sm font-medium">Delimiter</label>
+          <input type="text" name="delimiter" value="{{profile.delimiter}}">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium">Header row</label>
+          <select name="header">
+            <option value="1">on</option>
+            <option value="0">off</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium">Quote mode</label>
+          <select name="quoteMode">
+            <option value="minimal">minimal</option>
+            <option value="all">all</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-medium">Output naming rule</label>
+        <input type="text" name="outputNamingRule" value="{{profile.outputNamingRule}}">
+      </div>
+      <div class="flex gap-2">
+        <button class="btn-primary" type="submit">Save profile</button>
+        <button class="btn-secondary" formaction="/efuzy/api/profile/delete" type="submit">Delete profile</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="space-y-4">
+    <div class="panel panel-pad">
+      <div class="section-title">Available modes</div>
+      {{#maps.modes}}
+      <div class="mt-3 rounded-xl border border-work-800 px-3 py-3">
+        <div class="font-medium text-sm">{{label}}</div>
+        <div class="mt-1 text-xs subtle">{{id}}</div>
+      </div>
+      {{/maps.modes}}
+    </div>
+    <div class="panel panel-pad">
+      <div class="section-title">Field list guidance</div>
+      <div class="section-lead">Use comma-separated internal field names. Start with EFU837MAP defaults, then remove or reorder fields as needed.</div>
+    </div>
+  </aside>
+</div>
