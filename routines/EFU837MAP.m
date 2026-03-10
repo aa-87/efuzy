@@ -1,54 +1,170 @@
-EFU837MAP ; 837 export field map definitions
+EFU837MAP ; efuzy X12 837 export-facing mapping helpers
+ ;
+ ; Public:
+ ;   HEADERS(TYPE,.OUT)
+ ;   ROWCLAIM(ROOT,CID,.ROW)
+ ;   ROWLINE(ROOT,CID,LN,.ROW)
+ ;   ROWSUB(ROOT,CID,.ROW)
+ ;   ROWPROV(ROOT,CID,.ROW)
+ ;   ROWCOMB(ROOT,CID,LN,.ROW)
  ;
  Q
  ;
-LOADMAPS(TCTX)
- ; Modes
- S TCTX("maps","modes",1,"id")="claim_summary"
- S TCTX("maps","modes",1,"label")="Claim Summary CSV"
- S TCTX("maps","modes",1,"rowSource")="claim"
- S TCTX("maps","modes",2,"id")="service_line"
- S TCTX("maps","modes",2,"label")="Service Line CSV"
- S TCTX("maps","modes",2,"rowSource")="line"
- S TCTX("maps","modes",3,"id")="subscriber_patient"
- S TCTX("maps","modes",3,"label")="Subscriber / Patient CSV"
- S TCTX("maps","modes",3,"rowSource")="claim"
- S TCTX("maps","modes",4,"id")="provider_context"
- S TCTX("maps","modes",4,"label")="Provider / Billing Context CSV"
- S TCTX("maps","modes",4,"rowSource")="claim"
- S TCTX("maps","modes",5,"id")="custom"
- S TCTX("maps","modes",5,"label")="Custom CSV export"
- S TCTX("maps","modes",5,"rowSource")="claim"
- ;
- D MODEFIELDS(.TCTX,"claim_summary","claim","claim_id^Claim ID|total_charge^Total Charge|claim_date^Claim Date|subscriber_id^Subscriber ID|subscriber_last^Subscriber Last|subscriber_first^Subscriber First|patient_last^Patient Last|patient_first^Patient First|billing_provider_name^Billing Provider|payer_name^Payer|service_line_count^Service Lines")
- D MODEFIELDS(.TCTX,"service_line","line","claim_id^Claim ID|line_number^Line Number|procedure_code^Procedure Code|procedure_qualifier^Procedure Qualifier|line_charge^Line Charge|units^Units|line_service_date^Line Service Date|subscriber_id^Subscriber ID|patient_last^Patient Last|patient_first^Patient First")
- D MODEFIELDS(.TCTX,"subscriber_patient","claim","claim_id^Claim ID|subscriber_id^Subscriber ID|subscriber_last^Subscriber Last|subscriber_first^Subscriber First|patient_last^Patient Last|patient_first^Patient First|claim_date^Claim Date")
- D MODEFIELDS(.TCTX,"provider_context","claim","claim_id^Claim ID|billing_provider_name^Billing Provider|billing_provider_id^Billing Provider ID|payer_name^Payer|payer_id^Payer ID|submitter_name^Submitter|receiver_name^Receiver|claim_date^Claim Date")
- D MODEFIELDS(.TCTX,"custom","claim","claim_id^Claim ID|total_charge^Total Charge|claim_date^Claim Date|subscriber_id^Subscriber ID|subscriber_last^Subscriber Last|subscriber_first^Subscriber First|patient_last^Patient Last|patient_first^Patient First|billing_provider_name^Billing Provider|payer_name^Payer|service_line_count^Service Lines")
+HEADERS(TYPE,OUT) ; default CSV-oriented header sets
+ K OUT
+ S TYPE=$$UC^EFU837U($G(TYPE))
+ I TYPE="CLAIM" D  Q
+ . S OUT(1)="claim_id"
+ . S OUT(2)="total_charge"
+ . S OUT(3)="from_date"
+ . S OUT(4)="thru_date"
+ . S OUT(5)="facility_code"
+ . S OUT(6)="claim_freq"
+ . S OUT(7)="subscriber_name"
+ . S OUT(8)="subscriber_member_id"
+ . S OUT(9)="patient_name"
+ . S OUT(10)="patient_member_id"
+ . S OUT(11)="primary_payer_name"
+ . S OUT(12)="other_payer_name"
+ . S OUT(13)="billing_provider_name"
+ . S OUT(14)="billing_provider_npi"
+ . S OUT(15)="attending_provider_name"
+ . S OUT(16)="diag_codes"
+ I TYPE="LINE" D  Q
+ . S OUT(1)="claim_id"
+ . S OUT(2)="line_no"
+ . S OUT(3)="service_kind"
+ . S OUT(4)="revenue_code"
+ . S OUT(5)="procedure_qual"
+ . S OUT(6)="procedure_code"
+ . S OUT(7)="charge"
+ . S OUT(8)="uom"
+ . S OUT(9)="qty"
+ . S OUT(10)="svc_date"
+ I TYPE="SUBSCRIBER" D  Q
+ . S OUT(1)="claim_id"
+ . S OUT(2)="subscriber_name"
+ . S OUT(3)="member_id"
+ . S OUT(4)="dob"
+ . S OUT(5)="sex"
+ I TYPE="PROVIDER" D  Q
+ . S OUT(1)="claim_id"
+ . S OUT(2)="billing_provider_name"
+ . S OUT(3)="billing_provider_id"
+ . S OUT(4)="attending_provider_name"
+ . S OUT(5)="attending_provider_id"
+ I TYPE="COMBINED" D  Q
+ . S OUT(1)="tx_kind"
+ . S OUT(2)="guide"
+ . S OUT(3)="tx_control"
+ . S OUT(4)="claim_id"
+ . S OUT(5)="total_charge"
+ . S OUT(6)="from_date"
+ . S OUT(7)="thru_date"
+ . S OUT(8)="facility_code"
+ . S OUT(9)="claim_freq"
+ . S OUT(10)="subscriber_name"
+ . S OUT(11)="subscriber_member_id"
+ . S OUT(12)="patient_name"
+ . S OUT(13)="patient_member_id"
+ . S OUT(14)="primary_payer_name"
+ . S OUT(15)="other_payer_name"
+ . S OUT(16)="billing_provider_name"
+ . S OUT(17)="billing_provider_npi"
+ . S OUT(18)="attending_provider_name"
+ . S OUT(19)="diag_codes"
+ . S OUT(20)="line_no"
+ . S OUT(21)="service_kind"
+ . S OUT(22)="revenue_code"
+ . S OUT(23)="procedure_qual"
+ . S OUT(24)="procedure_code"
+ . S OUT(25)="charge"
+ . S OUT(26)="uom"
+ . S OUT(27)="qty"
+ . S OUT(28)="svc_date"
  Q
  ;
-MODEFIELDS(TCTX,MODE,ROWSRC,SPEC)
- N I,N,P,NM,LB
- S N=0
- F I=1:1:$L(SPEC,"|") S P=$P(SPEC,"|",I) I P'="" D
- . S N=N+1
- . S NM=$P(P,"^",1),LB=$P(P,"^",2)
- . S TCTX("maps","fields",MODE,N,"name")=NM
- . S TCTX("maps","fields",MODE,N,"label")=LB
- . S TCTX("maps","fields",MODE,N,"rowSource")=ROWSRC
+ROWCLAIM(ROOT,CID,ROW) ; normalized claim row
+ K ROW
+ S ROW(1)=$G(@ROOT@("norm","claim",CID,"claim_id"))
+ S ROW(2)=$G(@ROOT@("norm","claim",CID,"total_charge"))
+ S ROW(3)=$G(@ROOT@("norm","claim",CID,"from_date"))
+ S ROW(4)=$G(@ROOT@("norm","claim",CID,"thru_date"))
+ S ROW(5)=$G(@ROOT@("norm","claim",CID,"facility_code"))
+ S ROW(6)=$G(@ROOT@("norm","claim",CID,"claim_freq"))
+ S ROW(7)=$G(@ROOT@("norm","claim",CID,"subscriber_name"))
+ S ROW(8)=$G(@ROOT@("norm","claim",CID,"subscriber_member_id"))
+ S ROW(9)=$G(@ROOT@("norm","claim",CID,"patient_name"))
+ S ROW(10)=$G(@ROOT@("norm","claim",CID,"patient_member_id"))
+ S ROW(11)=$G(@ROOT@("norm","claim",CID,"primary_payer_name"))
+ S ROW(12)=$G(@ROOT@("norm","claim",CID,"other_payer_name"))
+ S ROW(13)=$G(@ROOT@("norm","claim",CID,"billing_provider_name"))
+ S ROW(14)=$G(@ROOT@("norm","claim",CID,"billing_provider_npi"))
+ S ROW(15)=$G(@ROOT@("norm","claim",CID,"attending_provider_name"))
+ S ROW(16)=$G(@ROOT@("norm","claim",CID,"diag_codes"))
  Q
  ;
-DFLIST(MODE)
- I $G(MODE)="service_line" Q "claim_id,line_number,procedure_code,procedure_qualifier,line_charge,units,line_service_date,subscriber_id,patient_last,patient_first"
- I $G(MODE)="subscriber_patient" Q "claim_id,subscriber_id,subscriber_last,subscriber_first,patient_last,patient_first,claim_date"
- I $G(MODE)="provider_context" Q "claim_id,billing_provider_name,billing_provider_id,payer_name,payer_id,submitter_name,receiver_name,claim_date"
- I $G(MODE)="custom" Q "claim_id,total_charge,claim_date,subscriber_id,subscriber_last,subscriber_first,patient_last,patient_first,billing_provider_name,payer_name,service_line_count"
- Q "claim_id,total_charge,claim_date,subscriber_id,subscriber_last,subscriber_first,patient_last,patient_first,billing_provider_name,payer_name,service_line_count"
+ROWLINE(ROOT,CID,LN,ROW) ; normalized service line row
+ K ROW
+ S ROW(1)=$G(@ROOT@("norm","line",CID,LN,"claim_id"))
+ S ROW(2)=$G(@ROOT@("norm","line",CID,LN,"line_no"))
+ S ROW(3)=$G(@ROOT@("norm","line",CID,LN,"service_kind"))
+ S ROW(4)=$G(@ROOT@("norm","line",CID,LN,"revenue_code"))
+ S ROW(5)=$G(@ROOT@("norm","line",CID,LN,"procedure_qual"))
+ S ROW(6)=$G(@ROOT@("norm","line",CID,LN,"procedure_code"))
+ S ROW(7)=$G(@ROOT@("norm","line",CID,LN,"charge"))
+ S ROW(8)=$G(@ROOT@("norm","line",CID,LN,"uom"))
+ S ROW(9)=$G(@ROOT@("norm","line",CID,LN,"qty"))
+ S ROW(10)=$G(@ROOT@("norm","line",CID,LN,"svc_date"))
+ Q
  ;
-ROWSRC(MODE)
- I $G(MODE)="service_line" Q "line"
- Q "claim"
+ROWSUB(ROOT,CID,ROW) ; subscriber-oriented row
+ K ROW
+ S ROW(1)=$G(@ROOT@("norm","claim",CID,"claim_id"))
+ S ROW(2)=$G(@ROOT@("norm","party","subscriber",CID,"name"))
+ S ROW(3)=$G(@ROOT@("norm","party","subscriber",CID,"member_id"))
+ S ROW(4)=$G(@ROOT@("norm","party","subscriber",CID,"dob"))
+ S ROW(5)=$G(@ROOT@("norm","party","subscriber",CID,"sex"))
+ Q
  ;
-COMB(L,F)
- Q $G(L)_$S($G(L)'=""&($G(F)'=""):", ",1:"")_$G(F)
+ROWPROV(ROOT,CID,ROW) ; provider/billing context row
+ K ROW
+ S ROW(1)=$G(@ROOT@("norm","claim",CID,"claim_id"))
+ S ROW(2)=$G(@ROOT@("norm","provider","billing",CID,"name"))
+ S ROW(3)=$G(@ROOT@("norm","provider","billing",CID,"id"))
+ S ROW(4)=$G(@ROOT@("norm","provider","claim",CID,"71","name"))
+ S ROW(5)=$G(@ROOT@("norm","provider","claim",CID,"71","id"))
+ Q
+ ;
+ROWCOMB(ROOT,CID,LN,ROW) ; combined claim + line row
+ K ROW
+ S ROW(1)=$G(@ROOT@("norm","claim",CID,"tx_kind"))
+ S ROW(2)=$G(@ROOT@("norm","claim",CID,"guide"))
+ S ROW(3)=$G(@ROOT@("norm","claim",CID,"tx_control"))
+ S ROW(4)=$G(@ROOT@("norm","claim",CID,"claim_id"))
+ S ROW(5)=$G(@ROOT@("norm","claim",CID,"total_charge"))
+ S ROW(6)=$G(@ROOT@("norm","claim",CID,"from_date"))
+ S ROW(7)=$G(@ROOT@("norm","claim",CID,"thru_date"))
+ S ROW(8)=$G(@ROOT@("norm","claim",CID,"facility_code"))
+ S ROW(9)=$G(@ROOT@("norm","claim",CID,"claim_freq"))
+ S ROW(10)=$G(@ROOT@("norm","claim",CID,"subscriber_name"))
+ S ROW(11)=$G(@ROOT@("norm","claim",CID,"subscriber_member_id"))
+ S ROW(12)=$G(@ROOT@("norm","claim",CID,"patient_name"))
+ S ROW(13)=$G(@ROOT@("norm","claim",CID,"patient_member_id"))
+ S ROW(14)=$G(@ROOT@("norm","claim",CID,"primary_payer_name"))
+ S ROW(15)=$G(@ROOT@("norm","claim",CID,"other_payer_name"))
+ S ROW(16)=$G(@ROOT@("norm","claim",CID,"billing_provider_name"))
+ S ROW(17)=$G(@ROOT@("norm","claim",CID,"billing_provider_npi"))
+ S ROW(18)=$G(@ROOT@("norm","claim",CID,"attending_provider_name"))
+ S ROW(19)=$G(@ROOT@("norm","claim",CID,"diag_codes"))
+ S ROW(20)=$G(@ROOT@("norm","line",CID,LN,"line_no"))
+ S ROW(21)=$G(@ROOT@("norm","line",CID,LN,"service_kind"))
+ S ROW(22)=$G(@ROOT@("norm","line",CID,LN,"revenue_code"))
+ S ROW(23)=$G(@ROOT@("norm","line",CID,LN,"procedure_qual"))
+ S ROW(24)=$G(@ROOT@("norm","line",CID,LN,"procedure_code"))
+ S ROW(25)=$G(@ROOT@("norm","line",CID,LN,"charge"))
+ S ROW(26)=$G(@ROOT@("norm","line",CID,LN,"uom"))
+ S ROW(27)=$G(@ROOT@("norm","line",CID,LN,"qty"))
+ S ROW(28)=$G(@ROOT@("norm","line",CID,LN,"svc_date"))
+ Q
  ;

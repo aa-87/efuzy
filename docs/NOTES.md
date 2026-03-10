@@ -1,0 +1,1 @@
+Patched EFU837T to trim raw segment whitespace in RAWMETA/TOKR and to make EXIST safe for missing benchmark files. This aligns T100/T200 with the real Example 1 and Example 2 trees and prevents nonexistent dental CSV benchmarks from crashing the suite.

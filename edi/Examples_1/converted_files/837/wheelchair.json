@@ -1,0 +1,253 @@
+[
+ {
+  "id" : "699b6efe8f62cf744b56a596",
+  "objectType" : "CLAIM",
+  "patientControlNumber" : "SMI123",
+  "chargeAmount" : 75.00,
+  "facilityCode" : {
+    "subType" : "PLACE_OF_SERVICE",
+    "code" : "12",
+    "desc" : "Home Health"
+  },
+  "placeOfServiceType" : "HOME",
+  "frequencyCode" : {
+    "subType" : "FREQUENCY_CODE",
+    "code" : "1",
+    "desc" : "Original claim"
+  },
+  "serviceDateFrom" : "2005-03-21",
+  "serviceDateTo" : "2005-03-21",
+  "subscriber" : {
+    "payerResponsibilitySequence" : "PRIMARY",
+    "relationshipType" : "SELF",
+    "claimFilingIndicatorCode" : "MB",
+    "insurancePlanType" : "MEDICARE_B",
+    "person" : {
+      "entityRole" : "INSURED_SUBSCRIBER",
+      "entityType" : "INDIVIDUAL",
+      "identificationType" : "MEMBER_ID",
+      "identifier" : "987654321A",
+      "lastNameOrOrgName" : "SMITH",
+      "firstName" : "JAMES",
+      "birthDate" : "1920-10-23",
+      "gender" : "MALE",
+      "address" : {
+        "line" : "12 MAIN ST",
+        "city" : "FRANKFORT",
+        "stateCode" : "IN",
+        "zipCode" : "46209"
+      }
+    },
+    "weight" : 155.00,
+    "payer" : {
+      "entityRole" : "PAYER",
+      "entityType" : "BUSINESS",
+      "identificationType" : "PAYOR_ID",
+      "identifier" : "99999",
+      "lastNameOrOrgName" : "DMERC CARRIER"
+    }
+  },
+  "providerSignatureIndicator" : "Y",
+  "assignmentParticipationCode" : "A",
+  "assignmentCertificationIndicator" : "Y",
+  "releaseOfInformationCode" : "Y",
+  "billingProvider" : {
+    "entityRole" : "BILLING_PROVIDER",
+    "entityType" : "BUSINESS",
+    "identificationType" : "NPI",
+    "identifier" : "7778889999",
+    "taxId" : "123567989",
+    "lastNameOrOrgName" : "XYZ WHEELCHAIR INC",
+    "address" : {
+      "line" : "1440 NORTH STREET",
+      "city" : "LAFAYETTE",
+      "stateCode" : "IN",
+      "zipCode" : "47904"
+    },
+    "additionalIds" : [ {
+      "qualifierCode" : "1G",
+      "type" : "PROVIDER_UPIN_NUMBER",
+      "identification" : "0426960001"
+    } ]
+  },
+  "diags" : [ {
+    "subType" : "ICD_10_PRINCIPAL",
+    "code" : "I6789",
+    "desc" : "Other cerebrovascular disease",
+    "formattedCode" : "I67.89"
+  }, {
+    "subType" : "ICD_10",
+    "code" : "G839",
+    "desc" : "Paralytic syndrome, unspecified",
+    "formattedCode" : "G83.9"
+  } ],
+  "serviceLines" : [ {
+    "chargeAmount" : 75.00,
+    "serviceDateFrom" : "2005-03-21",
+    "serviceDateTo" : "2005-03-21",
+    "lastCertificationDate" : "2005-03-25",
+    "certificationRevisionDate" : "2005-03-26",
+    "beginTherapyDate" : "2004-03-21",
+    "unitType" : "UNIT",
+    "unitCount" : 1,
+    "procedure" : {
+      "subType" : "HCPCS",
+      "code" : "K0001",
+      "desc" : "Standard wheelchair",
+      "modifiers" : [ {
+        "subType" : "HCPCS_MODIFIER",
+        "code" : "RR",
+        "desc" : "Rental (use the 'rr' modifier when dme is to be rented)"
+      }, {
+        "subType" : "HCPCS_MODIFIER",
+        "code" : "KH",
+        "desc" : "Dmepos item, initial claim, purchase or first month rental"
+      }, {
+        "subType" : "HCPCS_MODIFIER",
+        "code" : "BR",
+        "desc" : "The beneficiary has been informed of the purchase and rental options and has elected to rent the item"
+      } ]
+    },
+    "dmeService" : {
+      "procedure" : {
+        "subType" : "HCPCS",
+        "code" : "A4631"
+      },
+      "durationUnitType" : "DAYS",
+      "lengthOfMedicalNecessity" : 30,
+      "rentalPrice" : 50.00,
+      "purchasePrice" : 5000.00,
+      "billingFrequencyCode" : "4",
+      "billingFrequency" : "MONTHLY"
+    },
+    "attachments" : [ {
+      "reportTypeCode" : "CT",
+      "reportTransmissionCode" : "AD"
+    } ],
+    "dmeCertification" : {
+      "certificationTypeCode" : "I",
+      "durationUnitType" : "MONTH",
+      "duration" : 99
+    },
+    "conditionsIndicators" : [ {
+      "categoryCode" : "09",
+      "category" : "DME_CERTIFICATION",
+      "yesOrNoCondition" : "N",
+      "conditionCodes" : [ "ZV" ]
+    } ],
+    "measurements" : [ {
+      "categoryCode" : "TR",
+      "qualifierCode" : "HT",
+      "type" : "HEIGHT",
+      "value" : 70
+    } ],
+    "providers" : [ {
+      "entityRole" : "ORDERING",
+      "entityType" : "INDIVIDUAL",
+      "identificationType" : "NPI",
+      "identifier" : "1111155555",
+      "lastNameOrOrgName" : "WILSON",
+      "firstName" : "RANDALL",
+      "address" : {
+        "line" : "1226 WEST RAILROAD STREET",
+        "city" : "LAFAYETTE",
+        "stateCode" : "IN",
+        "zipCode" : "47905"
+      },
+      "contacts" : [ {
+        "functionCode" : "IC",
+        "name" : "LEE",
+        "contactNumbers" : [ {
+          "type" : "PHONE",
+          "number" : "7659259999"
+        } ]
+      } ],
+      "additionalIds" : [ {
+        "qualifierCode" : "1G",
+        "type" : "PROVIDER_UPIN_NUMBER",
+        "identification" : "M12345"
+      } ]
+    } ],
+    "forms" : [ {
+      "formTypeCode" : "UT",
+      "formIdentifier" : "02.03B",
+      "responses" : [ {
+        "questionIdentifier" : "1",
+        "yesOrNoResponse" : "Y"
+      }, {
+        "questionIdentifier" : "2",
+        "yesOrNoResponse" : "N"
+      }, {
+        "questionIdentifier" : "3",
+        "yesOrNoResponse" : "N"
+      }, {
+        "questionIdentifier" : "4",
+        "yesOrNoResponse" : "N"
+      }, {
+        "questionIdentifier" : "5",
+        "textResponse" : "8"
+      }, {
+        "questionIdentifier" : "8",
+        "yesOrNoResponse" : "N"
+      }, {
+        "questionIdentifier" : "9",
+        "yesOrNoResponse" : "Y"
+      } ]
+    } ],
+    "diagPointers" : [ 1, 2 ],
+    "diags" : [ {
+      "subType" : "ICD_10_PRINCIPAL",
+      "code" : "I6789",
+      "desc" : "Other cerebrovascular disease",
+      "formattedCode" : "I67.89"
+    }, {
+      "subType" : "ICD_10",
+      "code" : "G839",
+      "desc" : "Paralytic syndrome, unspecified",
+      "formattedCode" : "G83.9"
+    } ]
+  } ],
+  "transaction" : {
+    "id" : "699b6efe8f62cf744b56a561",
+    "controlNumber" : "112233",
+    "transactionType" : "PROF",
+    "hierarchicalStructureCode" : "0019",
+    "purposeCode" : "00",
+    "originatorApplicationTransactionId" : "16",
+    "creationDate" : "2005-03-26",
+    "creationTime" : "10:36:00",
+    "claimOrEncounterIdentifierType" : "CHARGEABLE",
+    "transactionSetIdentifierCode" : "837",
+    "implementationConventionReference" : "005010X222",
+    "fileInfo" : {
+      "name" : "wheelchair.dat",
+      "url" : "file:/edi-samples/edi_files/837/wheelchair.dat",
+      "lastModifiedDateTime" : "2026-02-21T14:40:29.884-05:00",
+      "fileType" : "EDI"
+    },
+    "sender" : {
+      "entityRole" : "SUBMITTER",
+      "entityType" : "BUSINESS",
+      "identificationType" : "ETIN",
+      "identifier" : "ABC55",
+      "lastNameOrOrgName" : "XYZ WHEELCHAIRS INC",
+      "contacts" : [ {
+        "functionCode" : "IC",
+        "name" : "JANE",
+        "contactNumbers" : [ {
+          "type" : "PHONE",
+          "number" : "2225551111"
+        } ]
+      } ]
+    },
+    "receiver" : {
+      "entityRole" : "RECEIVER",
+      "entityType" : "BUSINESS",
+      "identificationType" : "ETIN",
+      "identifier" : "99999",
+      "lastNameOrOrgName" : "DMERC CARRIER"
+    },
+    "creationDateTime" : "2005-03-26T10:36:00"
+  }
+}
+ ]

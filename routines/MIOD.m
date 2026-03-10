@@ -37,7 +37,7 @@ STERR
 START(CONF)
 	KILL ^MIO("CTL")
 	NEW PORT,ZJ S ZJ=0
-	SET PORT=$GET(CONF("server","listen","port"),9080)
+	SET PORT=$GET(CONF("server","listen","port"),8083)
 	J RUN(PORT) I $T S ZJ=$ZJOB D INFO^MIOLOG("mio_server_started","pid="_ZJ) I 1
 	E  D PANIC^MIOLOG("mio_server_failed","")
 	H 2 I $G(^MIO("CTL","PID"))=ZJ D INFO^MIOLOG("listen_success","port="_PORT)
@@ -90,7 +90,7 @@ JOBCONN(ADDR,HANDLE)
 	NEW METEN SET METEN=$$EN^MIOMET(.CONF)
 	; Rate limiting (ROI #6)
 	NEW RLEN SET RLEN=+$GET(CONF("server","rate","enabled"),0)
- 	; Error Center (ROI B)
+		; Error Center (ROI B)
 	NEW ERREN SET ERREN=$$EN^MIOERRC(.CONF)
 	;
 	; Keep-alive policy
@@ -122,7 +122,7 @@ JOBCONN(ADDR,HANDLE)
 	. ;
 	. KILL ^TMP($J,"MIOHTTP","RESP"),^TMP($J,"MIOHTTP","STREAM")
 	. ;
-	. NEW TPARSE SET TPARSE=""
+	. NEW TPARSE SET TPARSE="" SET ^OK=$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) M ^E=ERR
 	. NEW OK SET OK=$$PARSE^MIOHTTP(DEV,.CONF,.REQ,.ERR)
 	. IF METEN!LOGEN SET TPARSE=$$TSUS^MIOMET(),CTX("met","parse_ms")=((TPARSE-$GET(CTX("t0us")))/1000)
 	. IF 'OK DO  QUIT
@@ -189,7 +189,7 @@ JOBCONN(ADDR,HANDLE)
 	. ; Pre-match route (enables per-route authz without double parse)
 	. DO PREMATCH^MIOROUTE(.REQ,.CTX)
 	. ;
-	. ; Auth is enforced via MIOROUTE middleware (MIOMW AUTHB) when enabled.
+	. ; Auth is enforced via MIOROUTE middleware (MIOMW AUTHB) when enabled.;
 	. ;
 	. DO DISPATCH^MIOROUTE(DEV,.CONF,.REQ,.CTX)
 	. ;
@@ -216,7 +216,7 @@ JOBCONN(ADDR,HANDLE)
 	. . IF $GET(CTX("error"))="" SET CTX("error")=$GET(CTX("err","error"))
 	. . DO OBSX^MIOMET(MM,RT,ST,LATMS,+$GET(CTX("met","parse_ms")),+$GET(CTX("met","handler_ms")),+$GET(CTX("bytes_in")),+BOUT,$GET(CTX("error")))
 	. ;
-	. ; Access log for normal requests is emitted by router middleware (MIOMW LOGA).
+	. ; Access log for normal requests is emitted by router middleware (MIOMW LOGA).;
 	. ; Error Center capture (best effort)
 	. IF ERREN DO CAPREQ^MIOERRC(.CONF,.REQ,.CTX)
 	. ; Free request body storage each request

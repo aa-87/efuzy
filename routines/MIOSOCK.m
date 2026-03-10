@@ -68,10 +68,16 @@ READLN(DEV,TO,OUT)
 	;
 ; Entry point
 ; See docs/routines for details.;
-READN(DEV,N,TO,OUT)
+READNX(DEV,N,TO,OUT)
 	USE DEV READ OUT#N:TO
 	QUIT
 	;
+READN(DEV,N,TO,OUT)
+	N C,CH S C=0,OUT=$G(OUT) USE DEV FOR  READ *CH:TO S OUT=OUT_$C(CH),C=C+1 QUIT:C>=N
+	QUIT
+	;	
+	;	
+	;	
 ; Entry point
 ; See docs/routines for details.;
 WRITE(DEV,S)

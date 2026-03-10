@@ -1,0 +1,76 @@
+EFUZYTESTU ; efuzy test helpers
+ ;
+ Q
+ ;
+RESET(ROOT)
+ K ^MIO("EFUZY")
+ I $G(ROOT)'="" D RMDIR(ROOT)
+ Q
+ ;
+TMPROOT(NAME)
+ Q "/tmp/efuzy-test-"_$J_"-"_$TR($G(NAME)," /","--")
+ ;
+SETCONF(CONF,ROOT)
+ K CONF
+ S CONF("efuzy","rootDir")=$G(ROOT)
+ Q
+ ;
+MKDIR(PATH) ; mkdir -p PATH (best-effort)
+ N CMD
+ S CMD="mkdir -p "_$G(PATH)
+ ZSY CMD
+ Q
+ ;
+RMDIR(PATH) ; rm -rf PATH (best-effort)
+ N CMD
+ S CMD="rm -rf "_$G(PATH)
+ ZSY CMD
+ Q
+ ;
+WRITEFILE(PATH,TXT,OK)
+ K OK
+ S OK=0
+ O PATH:(newversion:stream:nowrap):1 E  Q
+ U PATH W $G(TXT)
+ C PATH
+ S OK=1
+ Q
+ ;
+READFILE(PATH,OUT)
+ N CH
+ K OUT
+ O PATH:(readonly:stream:nowrap):1 E  Q 0
+ U PATH
+ F  R CH#4096 S OUT=$G(OUT)_CH Q:$ZEOF
+ C PATH
+ Q 1
+ ;
+EXISTS(PATH)
+ O PATH:(readonly:stream:nowrap):1 E  Q 0
+ C PATH
+ Q 1
+ ;
+SAMPLE837(PATH,OK)
+ N X
+ S X="ISA*00*          *00*          *ZZ*SENDERID       *ZZ*RECEIVERID     *060101*1253*^*00501*000000905*0*T*:~"
+ S X=X_"GS*HC*SENDER*RECEIVER*20060101*1253*1*X*005010X222A1~"
+ S X=X_"ST*837*0001*005010X222A1~"
+ S X=X_"BHT*0019*00*0123*20060301*1023*CH~"
+ S X=X_"NM1*41*2*SUBMITTER*****46*12345~"
+ S X=X_"NM1*40*2*RECEIVER*****46*54321~"
+ S X=X_"HL*1**20*1~"
+ S X=X_"NM1*85*2*BILLINGPROV*****XX*9876543210~"
+ S X=X_"NM1*IL*1*DOE*JOHN****MI*ABC123~"
+ S X=X_"NM1*QC*1*DOE*JANE~"
+ S X=X_"CLM*CLM0001*100***11:B:1*Y*A*Y*Y~"
+ S X=X_"DTP*434*D8*20260301~"
+ S X=X_"REF*D9*REF0001~"
+ S X=X_"LX*1~"
+ S X=X_"SV1*HC:99213*75*UN*1***1~"
+ S X=X_"DTP*472*D8*20260301~"
+ S X=X_"SE*13*0001~"
+ S X=X_"GE*1*1~"
+ S X=X_"IEA*1*000000905~"
+ D WRITEFILE($G(PATH),X,.OK)
+ Q
+ ;

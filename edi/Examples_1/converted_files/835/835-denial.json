@@ -1,0 +1,161 @@
+[
+ {
+  "id" : "69446374c1a6b3ab024f4aeb",
+  "objectType" : "PAYMENT",
+  "patientControlNumber" : "PATACCT",
+  "chargeAmount" : 150.00,
+  "paymentAmount" : 0.00,
+  "facilityCode" : {
+    "subType" : "PLACE_OF_SERVICE",
+    "code" : "11",
+    "desc" : "Office"
+  },
+  "placeOfServiceType" : "OFFICE",
+  "frequencyCode" : {
+    "subType" : "FREQUENCY_CODE",
+    "code" : "1",
+    "desc" : "Original claim"
+  },
+  "serviceDateFrom" : "2019-01-01",
+  "serviceDateTo" : "2019-01-01",
+  "patient" : {
+    "person" : {
+      "entityRole" : "PATIENT",
+      "entityType" : "INDIVIDUAL",
+      "identificationType" : "MEMBER_ID",
+      "identifier" : "ABC123456789",
+      "lastNameOrOrgName" : "DOE",
+      "firstName" : "JOHN",
+      "middleName" : "N"
+    }
+  },
+  "claimStatusCode" : "4",
+  "claimStatus" : "DENIED",
+  "claimFilingIndicatorCode" : "MC",
+  "insurancePlanType" : "MEDICAID",
+  "payerControlNumber" : "CLAIMNUMBER",
+  "otherClaimRelatedIds" : [ {
+    "qualifierCode" : "EA",
+    "type" : "MEDICAL_RECORD_NUMBER",
+    "identification" : "12345F"
+  } ],
+  "supplementalAmounts" : [ {
+    "qualifierCode" : "AU",
+    "type" : "COVERAGE_AMOUNT",
+    "amount" : 150.00
+  } ],
+  "payer" : {
+    "entityRole" : "PAYER",
+    "entityType" : "BUSINESS",
+    "identificationType" : "PAYOR_ID",
+    "identifier" : "1234567890",
+    "lastNameOrOrgName" : "ANY PLAN USA",
+    "address" : {
+      "line" : "1 WALK THIS WAY",
+      "city" : "ANYCITY",
+      "stateCode" : "OH",
+      "zipCode" : "45209"
+    },
+    "contacts" : [ {
+      "functionCode" : "CX",
+      "contactNumbers" : [ {
+        "type" : "PHONE",
+        "number" : "8661112222"
+      } ]
+    }, {
+      "functionCode" : "BL",
+      "name" : "EDI",
+      "contactNumbers" : [ {
+        "type" : "PHONE",
+        "number" : "8002223333"
+      }, {
+        "type" : "EMAIL",
+        "number" : "EDI.SUPPORT@ANYPAYER.COM"
+      } ]
+    }, {
+      "functionCode" : "IC",
+      "contactNumbers" : [ {
+        "type" : "URL",
+        "number" : "WWW.ANYPAYER.COM"
+      } ]
+    } ]
+  },
+  "payee" : {
+    "entityRole" : "PAYEE",
+    "entityType" : "BUSINESS",
+    "identificationType" : "NPI",
+    "identifier" : "1123454567",
+    "taxId" : "123456789",
+    "lastNameOrOrgName" : "PROVIDER",
+    "address" : {
+      "line" : "2255 ANY ROAD",
+      "city" : "ANY CITY",
+      "stateCode" : "CA",
+      "zipCode" : "12211"
+    }
+  },
+  "claimReceivedDate" : "2019-02-09",
+  "claimContacts" : [ {
+    "functionCode" : "CX",
+    "name" : "G CUSTOMER SERVICE DEPARTMENT",
+    "contactNumbers" : [ {
+      "type" : "PHONE",
+      "number" : "8004074627"
+    } ]
+  } ],
+  "serviceLines" : [ {
+    "sourceLineId" : "1234",
+    "chargeAmount" : 150.00,
+    "paidAmount" : 0.00,
+    "serviceDateFrom" : "2019-01-01",
+    "unitCount" : 1,
+    "procedure" : {
+      "subType" : "CPT",
+      "code" : "99213",
+      "desc" : "Office or other outpatient visit for the evaluation and management of an established patient, which requires a medically appropriate history and/or examination and low level of medical decision making. When using total time on the date of the encounter for code selection, 20 minutes must be met or exceeded."
+    },
+    "adjustments" : [ {
+      "group" : "OTHER",
+      "reasonCode" : "252",
+      "reason" : {
+        "subType" : "CARC",
+        "code" : "252",
+        "desc" : "An attachment/other documentation is required to adjudicate this claim/service. At least one Remark Code must be provided (may be comprised of either the NCPDP Reject Reason Code, or Remittance Advice Remark Code that is not an ALERT)."
+      },
+      "amount" : 150.00
+    } ],
+    "remarkCodes" : [ "M143" ],
+    "remarks" : [ {
+      "subType" : "RARC",
+      "code" : "M143",
+      "desc" : "The provider must update license information with the payer."
+    } ],
+    "renderingProviderIds" : [ {
+      "qualifierCode" : "HPI",
+      "type" : "CMS_NPI",
+      "identification" : "99123"
+    } ]
+  } ],
+  "transaction" : {
+    "id" : "69446374c1a6b3ab024f4ac3",
+    "controlNumber" : "10060875",
+    "transactionType" : "PAYMENT",
+    "productionDate" : "2019-08-27",
+    "transactionHandlingType" : "NOTIFICATION_ONLY",
+    "totalPaymentAmount" : 0.00,
+    "creditOrDebitFlagCode" : "C",
+    "paymentMethodType" : "NON_PAYMENT",
+    "paymentDate" : "2019-08-16",
+    "checkOrEftTraceNumber" : "TRACE123",
+    "payerIdentifier" : "1234567890",
+    "receiverIdentifier" : "FAC",
+    "transactionSetIdentifierCode" : "835",
+    "fileInfo" : {
+      "name" : "835-denial.dat",
+      "url" : "file:/edi-samples/edi_files/835/835-denial.dat",
+      "lastModifiedDateTime" : "2025-09-22T10:36:36.673-04:00",
+      "fileType" : "EDI"
+    }
+  }
+}
+ ]

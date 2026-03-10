@@ -1,0 +1,19 @@
+<div class="tplCard">
+  <div class="tplTop">
+    <div class="tplTitle">
+      <a class="tplName" href="/plgd/playground?id={{id}}">{{name}}</a>
+      <div class="tplMeta">{{group}} · Updated {{updatedAgo}}</div>
+    </div>
+    <button class="btn" type="button" data-fav-btn data-id="{{id}}" aria-label="Toggle favorite">
+      <span aria-hidden="true">{{favIcon}}</span>
+    </button>
+  </div>
+  <div class="tplDesc">{{desc}}</div>
+  {{#tags}}
+    <div class="tplTags">
+      {{#tagList}}
+        <a class="chip" href="/plgd?tag={{.}}">{{.}}</a>
+      {{/tagList}}
+    </div>
+  {{/tags}}
+</div>

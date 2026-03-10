@@ -1,0 +1,17 @@
+<div class="tplRow">
+  <div class="tplRowMain">
+    <a class="tplName" href="/plgd/playground?id={{id}}">{{name}}</a>
+    <div class="tplMeta">{{group}} · Updated {{updatedAgo}}</div>
+    <div class="tplDesc">{{desc}}</div>
+    {{#tags}}
+      <div class="tplTags">
+        {{#tagList}}
+          <a class="chip" href="/plgd?tag={{.}}">{{.}}</a>
+        {{/tagList}}
+      </div>
+    {{/tags}}
+  </div>
+  <div class="tplRowActions">
+    <button class="btn" type="button" data-fav-btn data-id="{{id}}" aria-label="Toggle favorite">{{favIcon}}</button>
+  </div>
+</div>
