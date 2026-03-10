@@ -489,8 +489,9 @@ READALL(PATH,ERR) ; read external example file into one scalar for test-only raw
  . I '$T D  Q
  . . I $ZEOF S DONE=1 Q
  . . S DONE=1,ERR=1
- . S TXT=TXT_LINE_$C(10)
- . I $ZEOF S DONE=1
+ . S TXT=TXT_LINE
+ . I $ZEOF S DONE=1 Q
+ . S TXT=TXT_$C(10)
  C DEV
  U OLDIO
  Q TXT
@@ -600,20 +601,10 @@ COUNTPAT(DIR,PAT) ; count files matching one pattern
  Q C
  ;
 EX1DIRCNT(BASE) ; actual Example 1 837 source file count
- N ROOT
- S ROOT=$$EX1ROOT(BASE)
- I ROOT="" Q 0
- Q $$COUNTPAT(ROOT_"/edi_files/837","*.dat")
+ Q $$COUNTEX1FS($G(BASE))
  ;
 EX2DIRCNT(BASE) ; actual Example 2 source file count across all three subfolders
- N ROOT,C
- S ROOT=$$EX2ROOT(BASE)
- I ROOT="" Q 0
- S C=0
- S C=C+$$COUNTPAT($$EX2SUB(ROOT,"005010X222 Health Care Claim Professional"),"*.edi")
- S C=C+$$COUNTPAT($$EX2SUB(ROOT,"005010X223 Health Care Claim Institutional"),"*.edi")
- S C=C+$$COUNTPAT($$EX2SUB(ROOT,"005010X224 Health Care Claim Dental"),"*.edi")
- Q C
+ Q $$COUNTEX2FS($G(BASE))
  ;
 COUNTEX1FS(BASE) ; count Example 1 sources by exact metadata presence
  N I,C
