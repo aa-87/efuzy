@@ -21,7 +21,7 @@ SETMETA(ROOT,KEY,VAL) ; set model metadata value
  Q
  ;
 BUILD(ROOT,RES) ; build model-v1 structures from current parser state
- N TX,CID,LN,SID,PID,PIDK,PIDI,TXID
+ N TX,CID,LN,SID,PID,PIDK,PIDI,TXID,PK
  K RES
  D INIT(ROOT)
  D SETMETA(ROOT,"engine","EFU837MODEL")
@@ -56,7 +56,9 @@ BUILD(ROOT,RES) ; build model-v1 structures from current parser state
  F  S CID=$O(@ROOT@("claim",CID)) Q:'CID  D
  . S TXID=+$G(@ROOT@("claim",CID,"tx"))
  . S SID=+$G(@ROOT@("claim",CID,"sub"))
- . S PID=+$G(@ROOT@("claim",CID,"patient")) I 'PID S PID=SID
+ . S PID=+$G(@ROOT@("claim",CID,"patient"))
+ . S PK=$$PATKIND(ROOT,SID,PID)
+ . I PK="sub" S PID=SID
  . S @ROOT@("model","claim",CID,"claim_id")=$G(@ROOT@("claim",CID,"claim_id"))
  . S @ROOT@("model","claim",CID,"tx_id")=TXID
  . S @ROOT@("model","claim",CID,"claim_no")=CID
@@ -66,7 +68,7 @@ BUILD(ROOT,RES) ; build model-v1 structures from current parser state
  . S @ROOT@("model","claim",CID,"guide")=$G(@ROOT@("tx",TXID,"st","guide"))
  . S @ROOT@("model","claim",CID,"billing_provider_id")=$$BILLID(ROOT,TXID)
  . S @ROOT@("model","claim",CID,"subscriber_id")=$$PARTYID("sub",SID)
- . S PIDI=$$PARTYID($S(PID=SID:"sub",1:"patient"),PID)
+ . S PIDI=$$PARTYID(PK,PID)
  . S @ROOT@("model","claim",CID,"patient_id")=PIDI
  . S @ROOT@("model","claim",CID,"payer_id")=$$PAYERID(ROOT,SID,CID)
  . S @ROOT@("model","claim",CID,"facility_type")=$G(@ROOT@("claim",CID,"facility_code"))
@@ -84,6 +86,10 @@ BUILD(ROOT,RES) ; build model-v1 structures from current parser state
  S RES("claims")=$O(@ROOT@("model","claim",""),-1)
  S RES("transactions")=$O(@ROOT@("model","tx",""),-1)
  Q
+ ;
+PATKIND(ROOT,SID,PID) ; effective patient namespace for model claim linkage
+ I +$G(PID)>0,$D(@ROOT@("patient",+$G(PID))) Q "patient"
+ Q "sub"
  ;
 PARTYSUB(ROOT,SID) ; build subscriber party
  N ID

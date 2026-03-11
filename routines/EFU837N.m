@@ -6,7 +6,7 @@ EFU837N ; efuzy X12 837 normalization layer
  Q
  ;
 BUILD(ROOT,OPT,RES) ; build normalized export-facing views
- N CID,LN,SID,PID,TX,OS1
+ N CID,LN,SID,PID,TX,OS1,PK
  K RES
  K @ROOT@("norm")
  S CID=0
@@ -14,7 +14,8 @@ BUILD(ROOT,OPT,RES) ; build normalized export-facing views
  . S TX=+$G(@ROOT@("claim",CID,"tx"))
  . S SID=+$G(@ROOT@("claim",CID,"sub"))
  . S PID=+$G(@ROOT@("claim",CID,"patient"))
- . I 'PID S PID=SID
+ . S PK=$$PATKIND(ROOT,SID,PID)
+ . I PK="sub" S PID=SID
  . S @ROOT@("norm","claim",CID,"tx")=TX
  . S @ROOT@("norm","claim",CID,"tx_kind")=$$TXKIND^EFU837U(ROOT,TX)
  . S @ROOT@("norm","claim",CID,"guide")=$G(@ROOT@("tx",TX,"st","guide"))
@@ -30,9 +31,9 @@ BUILD(ROOT,OPT,RES) ; build normalized export-facing views
  . S @ROOT@("norm","claim",CID,"subscriber_id")=SID
  . S @ROOT@("norm","claim",CID,"patient_id")=PID
  . S @ROOT@("norm","claim",CID,"subscriber_name")=$$PNAME(ROOT,"sub",SID)
- . S @ROOT@("norm","claim",CID,"patient_name")=$$PNAME(ROOT,$S(PID=SID:"sub",1:"patient"),PID)
+ . S @ROOT@("norm","claim",CID,"patient_name")=$$PNAME(ROOT,PK,PID)
  . S @ROOT@("norm","claim",CID,"subscriber_member_id")=$G(@ROOT@("sub",SID,"name","id"))
- . S @ROOT@("norm","claim",CID,"patient_member_id")=$S(PID=SID:$G(@ROOT@("sub",SID,"name","id")),1:$G(@ROOT@("patient",PID,"name","id")))
+ . S @ROOT@("norm","claim",CID,"patient_member_id")=$$PMEMBER(ROOT,PK,PID)
  . S @ROOT@("norm","claim",CID,"primary_payer_name")=$G(@ROOT@("sub",SID,"payer","name","name_last"))
  . S OS1=$O(@ROOT@("claim",CID,"other_sub",0))
  . S @ROOT@("norm","claim",CID,"other_payer_name")=$S(OS1>0:$G(@ROOT@("claim",CID,"other_sub",OS1,"payer","name","name_last")),1:"")
@@ -45,8 +46,8 @@ BUILD(ROOT,OPT,RES) ; build normalized export-facing views
  . S @ROOT@("norm","party","subscriber",CID,"member_id")=$G(@ROOT@("sub",SID,"name","id"))
  . S @ROOT@("norm","party","subscriber",CID,"dob")=$G(@ROOT@("sub",SID,"dmg","date"))
  . S @ROOT@("norm","party","subscriber",CID,"sex")=$G(@ROOT@("sub",SID,"dmg","sex"))
- . S @ROOT@("norm","party","patient",CID,"name")=$$PNAME(ROOT,$S(PID=SID:"sub",1:"patient"),PID)
- . S @ROOT@("norm","party","patient",CID,"member_id")=$S(PID=SID:$G(@ROOT@("sub",SID,"name","id")),1:$G(@ROOT@("patient",PID,"name","id")))
+ . S @ROOT@("norm","party","patient",CID,"name")=$$PNAME(ROOT,PK,PID)
+ . S @ROOT@("norm","party","patient",CID,"member_id")=$$PMEMBER(ROOT,PK,PID)
  . S @ROOT@("norm","provider","billing",CID,"name")=$G(@ROOT@("tx",TX,"billing","name","name_last"))
  . S @ROOT@("norm","provider","billing",CID,"id")=$G(@ROOT@("tx",TX,"billing","name","id"))
  . S @ROOT@("norm","provider","billing",CID,"id_qual")=$G(@ROOT@("tx",TX,"billing","name","id_qual"))
@@ -83,6 +84,14 @@ THRU(ROOT,CID) ; normalized claim thru date
  I $D(@ROOT@("claim",CID,"dtp","434","value")) Q $G(@ROOT@("claim",CID,"dtp","434","value"))
  I $D(@ROOT@("claim",CID,"dtp","472","value")) Q $G(@ROOT@("claim",CID,"dtp","472","value"))
  Q ""
+ ;
+PATKIND(ROOT,SID,PID) ; effective normalized patient source kind
+ I +$G(PID)>0,$D(@ROOT@("patient",+$G(PID))) Q "patient"
+ Q "sub"
+ ;
+PMEMBER(ROOT,KIND,ID) ; effective normalized patient/member id
+ I $G(KIND)="patient" Q $G(@ROOT@("patient",+$G(ID),"name","id"))
+ Q $G(@ROOT@("sub",+$G(ID),"name","id"))
  ;
 PNAME(ROOT,KIND,ID) ; pretty person/org name
  N L,F,M,S
