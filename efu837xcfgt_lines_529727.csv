@@ -1,3 +1,0 @@
-claim_id,line_no,tx_kind,guide,service_kind,revenue_code,procedure_qual,procedure_code,charge,uom,qty,svc_date,subscriber_name,patient_name,billing_provider_name,diag_codes
-ICN1,1,837I,005010X223A2,SV2,0300,HC,85025,250,UN,1,20260311,"DOE, JANE","DOE, JOHN",BILLING CLINIC,1234|5678
-ICN1,2,837I,005010X223A2,SV2,0300,HC,80053,250,UN,1,20260311,"DOE, JANE","DOE, JOHN",BILLING CLINIC,1234|5678
