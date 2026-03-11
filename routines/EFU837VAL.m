@@ -12,8 +12,8 @@ POST(ROOT,RES) ; post-parse validation sweep
  I FRAME="transaction" D
  . I '$D(@ROOT@("meta","isa","control")) D ADDDIAG^EFU837U(ROOT,"warning","tx_only_no_isa","Transaction-only sample does not include ISA/IEA envelope",0,"ISA")
  E  D
- . I '$D(@ROOT@("meta","isa","control")) D ADDDIAG^EFU837U(ROOT,"error","missing_isa","ISA segment not found",0,"ISA")
- . I '$D(@ROOT@("meta","iea","control")) D ADDDIAG^EFU837U(ROOT,"error","missing_iea","IEA segment not found",0,"IEA")
+ . I '$D(@ROOT@("meta","isa","control")) D MISS(ROOT,"missing_isa","ISA segment not found",0,"ISA")
+ . I '$D(@ROOT@("meta","iea","control")) D MISS(ROOT,"missing_iea","IEA segment not found",0,"IEA")
  I +$G(@ROOT@("stats","transactions"))=0 D ADDDIAG^EFU837U(ROOT,"error","no_transactions","No ST/SE transaction set was parsed",0,"ST")
  I +$G(@ROOT@("stats","claims"))=0 D ADDDIAG^EFU837U(ROOT,"warning","no_claims","File parsed but no CLM segments were found",0,"CLM")
  S TX=0
@@ -28,5 +28,12 @@ POST(ROOT,RES) ; post-parse validation sweep
  S RES("ok")=$S(+$G(@ROOT@("stats","error"))>0:0,1:1)
  S RES("errors")=+$G(@ROOT@("stats","error"))
  S RES("warnings")=+$G(@ROOT@("stats","warning"))
+ Q
+ ;
+MISS(ROOT,CODE,MSG,SEGNO,SEGID) ; missing envelope diag with optional lenient downgrade
+ N SEV,OK
+ S OK=($G(@ROOT@("meta","lenient"))=1)!($G(@ROOT@("meta","accept_bad_envelope"))=1)
+ S SEV=$S(OK:"warning",1:"error")
+ D ADDDIAG^EFU837U(ROOT,SEV,$G(CODE),$G(MSG),+$G(SEGNO),$G(SEGID))
  Q
  ;

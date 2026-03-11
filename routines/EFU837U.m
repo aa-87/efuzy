@@ -21,10 +21,12 @@ EFU837U ; efuzy X12 837 utility helpers
 INIT(ROOT,OPT) ; initialize parse root
 	K @ROOT
 	S @ROOT@("meta","engine")="EFU837"
-	S @ROOT@("meta","version")="0.2.0"
+	S @ROOT@("meta","version")="0.2.1"
 	S @ROOT@("meta","mode")=$S($G(OPT("mode"))'="":OPT("mode"),1:"full")
-	S @ROOT@("meta","chunk")=$S(+$G(OPT("chunk"))>0:+$G(OPT("chunk")),1:64)
+	S @ROOT@("meta","chunk")=$S(+$G(OPT("chunk"))>0:+$G(OPT("chunk")),1:8192)
 	S @ROOT@("meta","startedH")=$H
+	S @ROOT@("meta","lenient")=$$BOOL($G(OPT("lenient")))
+	S @ROOT@("meta","accept_bad_envelope")=$$BOOL($G(OPT("accept_bad_envelope")))
 	Q
 	;
 ADDDIAG(ROOT,SEV,CODE,MSG,SEGNO,SEGID) ; append diagnostic
@@ -90,7 +92,7 @@ TRIM(X) ; trim leading/trailing spaces
 	N Y
 	S Y=$G(X)
 	F  Q:$E(Y,1)'=" "  S Y=$E(Y,2,$L(Y))
-	F  Q:$E(Y,$L(Y))'=" "  S Y=$E(Y,1,$L(Y)-1) I Y="" Q
+	F  Q:Y=""  Q:$E(Y,$L(Y))'=" "  S Y=$E(Y,1,$L(Y)-1)
 	Q Y
 	;
 UC(X) ; uppercase alpha only
@@ -118,48 +120,55 @@ BOOL(X) ; normalize boolean-ish values
 	;
 JOINCODES(ROOT,CID,SEP) ; join claim HI codes for previews
 	N I,S
-	S SEP=$S($G(SEP)'="":SEP,1:"|")
-	S S="",I=0
+	S SEP=$S($G(SEP)'="":SEP,1:"|"),S=""
+	S I=0
 	F  S I=$O(@ROOT@("claim",CID,"diag",I)) Q:'I  D
 	. I S'="" S S=S_SEP
 	. S S=S_$G(@ROOT@("claim",CID,"diag",I,"code"))
 	Q S
 	;
-TXKIND(ROOT,TX) ; infer 837 flavor from guide or service kind
-	N G,CID,SK
+TXKIND(ROOT,TX) ; best-effort transaction flavor
+	N G
 	S G=$$UC($G(@ROOT@("tx",TX,"st","guide")))
 	I G["X224" Q "837D"
 	I G["X223" Q "837I"
 	I G["X222" Q "837P"
 	I G["X299" Q "837I"
 	I G["X298" Q "837P"
-	S CID=0
-	F  S CID=$O(@ROOT@("claim",CID)) Q:'CID  I +$G(@ROOT@("claim",CID,"tx"))=+TX D  Q:SK'=""
-	. S SK=$G(@ROOT@("claim",CID,"line",1,"service_kind"))
-	I SK="SV3" Q "837D"
-	I SK="SV2" Q "837I"
-	I SK="SV1" Q "837P"
 	Q "837"
 	;
-CSVESC(X) ; CSV-safe scalar
+CSVESC(X) ; quote a CSV field when needed
 	N Y
 	S Y=$G(X)
-	I (Y[",")!(Y[$C(34))!(Y[$C(10))!(Y[$C(13)) D
-	. S Y=$TR(Y,$C(34),$C(34,34))
-	. S Y=$C(34)_Y_$C(34)
+	S Y=$TR(Y,$C(13,10),"  ")
+	I (Y[",")!(Y["""")!(Y[$C(10))!(Y[$C(13)) S Y=""""_$$REPL(Y,"""","""""")_""""
 	Q Y
 	;
-BASENAME(PATH) ; last path component
-	N P,I,C,S
-	S S=$G(PATH),P=0
-	F I=1:1:$L(S) S C=$E(S,I) I (C="/")!(C=$C(92)) S P=I
-	Q $E(S,P+1,$L(S))
+BASENAME(PATH) ; basename of file path
+	N I,S,C
+	S S=$G(PATH)
+	F I=$L(S):-1:1 I $E(S,I)="/" Q
+	Q $S(I>0:$E(S,I+1,$L(S)),1:S)
 	;
-NOEXT(NAME) ; drop final extension
-	N I,P,C,S
-	S S=$G(NAME),P=0
-	F I=1:1:$L(S) S C=$E(S,I) I C="." S P=I
-	I 'P Q S
-	Q $E(S,1,P-1)
+NOEXT(NAME) ; remove last file extension
+	N I,S
+	S S=$$BASENAME($G(NAME))
+	F I=$L(S):-1:1 I $E(S,I)="." Q
+	Q $S(I>1:$E(S,1,I-1),1:S)
 	;
+REPLACE(STR,FROM,TO) ; simple replace-all
+	N OUT,P,L
+	S OUT=$G(STR),L=$L($G(FROM))
+	I L=0 Q OUT
+	F  Q:OUT'[$G(FROM)  D
+	. S P=$F(OUT,$G(FROM)) Q:'P
+	. S OUT=$E(OUT,1,P-L-1)_$G(TO)_$E(OUT,P,$L(OUT))
+	Q OUT
 	;
+REPL(S,F,R)
+	NEW OUT SET OUT=""
+	NEW I
+	FOR I=1:1:$LENGTH(S,F) DO
+	. SET OUT=OUT_$PIECE(S,F,I)
+	. IF I<$LENGTH(S,F) SET OUT=OUT_R
+	QUIT OUT
