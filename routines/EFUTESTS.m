@@ -1,0 +1,11 @@
+EFUTESTS
+	;	
+	;	
+	;
+	;	
+	D ^EFU837SPECT
+	D ALL^EFUX12T("edi")
+	D STRICT837^EFUX12T("edi")
+	D EXAMPLES^EFU837T("edi")
+	D ALL^EFU837T("edi")
+	Q

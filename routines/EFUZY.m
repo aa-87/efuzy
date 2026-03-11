@@ -77,7 +77,7 @@ PROFILES(DEV,CONF,REQ,CTX)
 	;
 PROFILE(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR,ID
-	S ID=$G(REQ("params","id"))
+	S ID=$G(REQ("params","id")) S ^A=ID
 	D BUILDPROF^EFUZYUI(.CONF,.REQ,.CTX,ID,.TCTX)
 	 ;D START^MIOTPL(.CONF)
 	D RENDERPAGE^MIOTPL("pages/efuzy_profile_edit.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
