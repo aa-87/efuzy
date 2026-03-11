@@ -1,0 +1,2 @@
+claim_id,tx_kind,guide,total_charge,from_date,thru_date,facility_code,claim_freq,subscriber_name,subscriber_member_id,patient_name,patient_member_id,primary_payer_name,other_payer_name,billing_provider_name,billing_provider_npi,attending_provider_name,diag_codes
+ICN1,837I,005010X223A2,500,20260311,20260311,11,1,"DOE, JANE",SUB1,"DOE, JOHN",PAT1,MEDICARE,,BILLING CLINIC,9999999999,"SMITH, ADAM",1234|5678

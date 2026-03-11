@@ -10,7 +10,7 @@ SEED()
 	S P("name")="Claim Summary"
 	S P("workflowType")="837_to_csv"
 	S P("exportMode")="claim_summary"
-	S P("selectedFields")=$$DFLIST^EFU837MAP("claim_summary")
+	S P("selectedFields")=$$DFLIST^EFU837EXPMP("claim_summary")
 	S P("fieldOrder")=P("selectedFields")
 	S P("delimiter")=","
 	S P("header")=1
@@ -22,7 +22,7 @@ SEED()
 	S P("name")="Service Line"
 	S P("workflowType")="837_to_csv"
 	S P("exportMode")="service_line"
-	S P("selectedFields")=$$DFLIST^EFU837MAP("service_line")
+	S P("selectedFields")=$$DFLIST^EFU837EXPMP("service_line")
 	S P("fieldOrder")=P("selectedFields")
 	S P("delimiter")=","
 	S P("header")=1
@@ -61,17 +61,18 @@ SAVEONE(POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","profile",ID,"name")=$$REQ($G(POST("name")),"profile_name_required",.ERR) I $D(ERR) Q 0
 	S ^MIO("EFUZY","cfg","profile",ID,"workflowType")=$S($G(POST("workflowType"))'="":POST("workflowType"),1:"837_to_csv")
 	S ^MIO("EFUZY","cfg","profile",ID,"exportMode")=MODE
-	S ^MIO("EFUZY","cfg","profile",ID,"selectedFields")=$S($G(POST("selectedFields"))'="":POST("selectedFields"),1:$$DFLIST^EFU837MAP(MODE))
+	S ^MIO("EFUZY","cfg","profile",ID,"selectedFields")=$S($G(POST("selectedFields"))'="":POST("selectedFields"),1:$$DFLIST^EFU837EXPMP(MODE))
 	S ^MIO("EFUZY","cfg","profile",ID,"fieldOrder")=$S($G(POST("fieldOrder"))'="":POST("fieldOrder"),1:^MIO("EFUZY","cfg","profile",ID,"selectedFields"))
 	S ^MIO("EFUZY","cfg","profile",ID,"delimiter")=$S($G(POST("delimiter"))'="":POST("delimiter"),1:",")
 	S ^MIO("EFUZY","cfg","profile",ID,"header")=$S($G(POST("header"))'="":+POST("header"),1:1)
 	S ^MIO("EFUZY","cfg","profile",ID,"quoteMode")=$S($G(POST("quoteMode"))'="":POST("quoteMode"),1:"minimal")
-	S ^MIO("EFUZY","cfg","profile",ID,"rowSource")=$S($G(POST("rowSource"))'="":POST("rowSource"),1:$$ROWSRC^EFU837MAP(MODE))
+	S ^MIO("EFUZY","cfg","profile",ID,"rowSource")=$S($G(POST("rowSource"))'="":POST("rowSource"),1:$$ROWSRC^EFU837EXPMP(MODE))
 	S ^MIO("EFUZY","cfg","profile",ID,"outputNamingRule")=$S($G(POST("outputNamingRule"))'="":POST("outputNamingRule"),1:"{{source_base}}-"_MODE_".csv")
 	S ^MIO("EFUZY","cfg","profile",ID,"updatedAt")=$$NOWISO^MIOUTIL()
 	I '$D(^MIO("EFUZY","cfg","profile",ID,"createdAt")) S ^MIO("EFUZY","cfg","profile",ID,"createdAt")=^MIO("EFUZY","cfg","profile",ID,"updatedAt")
 	S ^MIO("EFUZY","idx","profile","name",$ZCONVERT(^MIO("EFUZY","cfg","profile",ID,"name"),"L"),ID)=""
-	Q 1
+	Q:$Q 1
+	Q
 	;
 GET(CONF,ID,OUT)
 	D SEEDCHK

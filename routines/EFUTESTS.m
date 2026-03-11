@@ -1,8 +1,7 @@
 EFUTESTS
 	;	
 	;	
-	;
-	;	
+	D ^EFU837XCFGT
 	D ^EFU837SPECT
 	D ALL^EFUX12T("edi")
 	D STRICT837^EFUX12T("edi")

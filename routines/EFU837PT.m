@@ -1,4 +1,4 @@
-EFU837PT ; tests for EFU837P
+EFU837P2T ; tests for EFU837P2
 	;
 	;
 START
@@ -15,7 +15,7 @@ T001 ; detect separators and isa values
 	S PATH=ROOT_"/sample.837"
 	D SAMPLE837^EFUZYTESTU(PATH,.OK)
 	D OK^MIOTASSERT(OK,"[T001][sample written]")
-	D OK^MIOTASSERT($$DETECT^EFU837P(PATH,.EL,.SEG,.COMP,.REP,.VER,.SND,.RCV,.ERR),"[T001][detect ok]")
+	D OK^MIOTASSERT($$DETECT^EFU837P2(PATH,.EL,.SEG,.COMP,.REP,.VER,.SND,.RCV,.ERR),"[T001][detect ok]")
 	D EQ^MIOTASSERT(EL,"*","[T001][element sep]")
 	D EQ^MIOTASSERT(SEG,"~","[T001][segment sep]")
 	D EQ^MIOTASSERT(COMP,":","[T001][component sep]")
@@ -33,7 +33,7 @@ T002 ; parse sample 837 into work rows and stats
 	S PATH=ROOT_"/sample.837"
 	D SAMPLE837^EFUZYTESTU(PATH,.OK)
 	S JOBID=31,CFG("jobId")=JOBID
-	D OK^MIOTASSERT($$PARSE^EFU837P(PATH,.CFG,.OUT,.ERR),"[T002][parse ok]")
+	D OK^MIOTASSERT($$PARSE^EFU837P2(PATH,.CFG,.OUT,.ERR),"[T002][parse ok]")
 	D EQ^MIOTASSERT($G(OUT("claimCount")),1,"[T002][claim count]")
 	D EQ^MIOTASSERT($G(OUT("serviceLineCount")),1,"[T002][line count]")
 	D EQ^MIOTASSERT($G(^MIO("EFUZY","job",JOBID,"wrk","claim",1,"claim_id")),"CLM0001","[T002][claim id]")
@@ -53,7 +53,7 @@ T003 ; detect rejects non-isa file
 	D MKDIR^EFUZYTESTU(ROOT)
 	S PATH=ROOT_"/bad.txt"
 	D WRITEFILE^EFUZYTESTU(PATH,"NOTX12",.OK)
-	D EQ^MIOTASSERT($$DETECT^EFU837P(PATH,.EL,.SEG,.COMP,.REP,.VER,.SND,.RCV,.ERR),0,"[T003][detect fail]")
+	D EQ^MIOTASSERT($$DETECT^EFU837P2(PATH,.EL,.SEG,.COMP,.REP,.VER,.SND,.RCV,.ERR),0,"[T003][detect fail]")
 	D EQ^MIOTASSERT($G(ERR("error")),"not_x12_isa","[T003][error]")
 	D RMDIR^EFUZYTESTU(ROOT)
 	Q
