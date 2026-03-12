@@ -20,7 +20,7 @@ LENIENT(ROOT,RES) ; lenient mode wrapper
  Q
  ;
 RUN(ROOT,OPT,RES) ; validate one parsed 837 root using EFU837SPEC + EFUX12DIAG
- N MODE
+ N MODE,CGRES
  K RES
  K @ROOT@("vdiag")
  I '$D(@ROOT@("model_version")) D BUILD^EFU837MODEL(ROOT,.RES)
@@ -31,8 +31,11 @@ RUN(ROOT,OPT,RES) ; validate one parsed 837 root using EFU837SPEC + EFUX12DIAG
  D PASSDATA(ROOT,MODE)
  D PASSPARTY(ROOT,MODE)
  D PASSBAL(ROOT,MODE)
+ D PASSCG(ROOT,.OPT,MODE,.CGRES)
  D SUMMARY^EFUX12DIAG(ROOT,.RES)
  S RES("mode")=MODE
+ I $G(CGRES("profile"))'="" S RES("profile")=$G(CGRES("profile"))
+ I $G(CGRES("profile_status"))'="" S RES("profile_status")=$G(CGRES("profile_status"))
  Q
  ;
 PASSENV(ROOT,MODE) ; envelope/control validation
@@ -226,6 +229,15 @@ AMTN(X) ; numeric amount or empty string if not parseable
  ;
 ABS(X) ; absolute value
  Q $S(+$G(X)<0:-+$G(X),1:+$G(X))
+ ;
+
+PASSCG(ROOT,OPT,MODE,RES) ; optional companion-guide overlay validation
+ N CRES
+ I $G(OPT("profile"))="",$G(OPT("companion_profile"))="" Q
+ D APPLY^EFU837CG(ROOT,.OPT,MODE,.CRES)
+ I $G(CRES("profile"))'="" S RES("profile")=$G(CRES("profile"))
+ I $G(CRES("profile_status"))'="" S RES("profile_status")=$G(CRES("profile_status"))
+ Q
  ;
 EMIT(ROOT,MODE,CODE,MSG,CTX) ; severity by mode for downgradable findings
  I MODE="lenient" D WARN^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX) Q
