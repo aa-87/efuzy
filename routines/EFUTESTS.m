@@ -11,6 +11,7 @@ START ; run current additive suite set
  D STRICT837^EFUX12T("edi")
  D EXAMPLES^EFU837T("edi")
  D ALL^EFU837T("edi")
+ D ^EFU837CANT
  D ^EFU837GOLDT
  D ^EFU837WVALT
  D ^EFUX12PERFT
