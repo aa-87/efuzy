@@ -65,7 +65,7 @@ T820(FAIL) ; valid fixtures round-trip cleanly
 	Q
 	;
 T830(FAIL) ; distinct patient fixture preserves subscriber/patient separation
-	N ROOT,PATH,OPT,RES,CID
+	 N ROOT,PATH,OPT,RES,CID
 	S ROOT=$NA(^TMP($J,"EFU837GOLDT",830))
 	S PATH=$$WRFILE($$DATA^EFU837GOLD("GP020"))
 	D PARSE^EFU837P(PATH,ROOT,.OPT,.RES)

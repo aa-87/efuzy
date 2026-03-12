@@ -24,28 +24,28 @@ EXPORT(ROOT,OUTBASE,RES) ; export canonical claims + lines CSV files
  I '+$G(NOK("ok")) S RES("error")="norm_failed" M RES("norm")=NOK Q
  S CPATH=OUTBASE_"-claims.csv",LPATH=OUTBASE_"-lines.csv"
  S OLDIO=$IO
- O CPATH:(NEWVERSION:STREAM:WRITEONLY):1
+ O CPATH:(NEWVERSION:STREAM):1
  I '$T S RES("error")="open_claims_failed" U OLDIO Q
  U CPATH
  D CLAIMHDR(.RC)
- D WRROW(CPATH,.RC)
+ D WRROW(.RC)
  S CID=0
  F  S CID=$O(@ROOT@("norm","claim",CID)) Q:'CID  D
  . D CLAIMROW(ROOT,CID,.RC)
- . D WRROW(CPATH,.RC)
+ . D WRROW(.RC)
  C CPATH
  U OLDIO
- O LPATH:(NEWVERSION:STREAM:WRITEONLY):1
+ O LPATH:(NEWVERSION:STREAM):1
  I '$T S RES("error")="open_lines_failed" U OLDIO Q
  U LPATH
  D LINEHDR(.RL)
- D WRROW(LPATH,.RL)
+ D WRROW(.RL)
  S CID=0
  F  S CID=$O(@ROOT@("norm","line",CID)) Q:'CID  D
  . S LN=0
  . F  S LN=$O(@ROOT@("norm","line",CID,LN)) Q:'LN  D
  . . D LINEROW(ROOT,CID,LN,.RL)
- . . D WRROW(LPATH,.RL)
+ . . D WRROW(.RL)
  C LPATH
  U OLDIO
  S RES("ok")=1
@@ -61,10 +61,12 @@ LOAD(INBASE,ROOT,RES) ; load canonical CSV package into ROOT("canon")
  I $G(ROOT)="" S ROOT=$NA(^TMP($J,"EFU837CAN"))
  K @ROOT@("canon")
  S CPATH=INBASE_"-claims.csv",LPATH=INBASE_"-lines.csv"
+ I '$$FEX(CPATH) S RES("error")="claims_file_missing",RES("claims_path")=CPATH Q
+ I '$$FEX(LPATH) S RES("error")="lines_file_missing",RES("lines_path")=LPATH Q
  D LOADCLA(CPATH,ROOT,.ERR)
- I +$G(ERR) S RES("error")="load_claims_failed" Q
+ I +$G(ERR) S RES("error")="load_claims_failed",RES("claims_path")=CPATH Q
  D LOADLIN(LPATH,ROOT,.ERR)
- I +$G(ERR) S RES("error")="load_lines_failed" Q
+ I +$G(ERR) S RES("error")="load_lines_failed",RES("lines_path")=LPATH Q
  S RES("ok")=1
  S RES("claims")=+$G(@ROOT@("canon","claims"))
  S RES("lines")=+$G(@ROOT@("canon","lines"))
@@ -217,23 +219,6 @@ LOADLIN(PATH,ROOT,ERR) ; load lines file
  S @ROOT@("canon","lines")=+$G(@ROOT@("canon","canon_lines"))
  Q
  ;
-READROW(LINE,DONE,ERR) ; EOF-safe CSV line reader for stream files
- N $ETRAP,$ESTACK
- S LINE=""
- S $ETRAP="D RDERR^EFU837CAN"
- R LINE:1
- S $ETRAP=""
- I '$T D  Q
- . I $ZEOF S DONE=1 Q
- . S ERR=1
- I $ZEOF,LINE="" S DONE=1 Q
- I $E(LINE,$L(LINE))=$C(13) S LINE=$E(LINE,1,$L(LINE)-1)
- Q
- ;
-RDERR ; read error trap helper for READROW
- I $ZSTATUS["IOEOF" S DONE=1,$ECODE="" Q
- S ERR=1,$ECODE="" Q
- ;
 CSET(ROOT,CID,MAP,ROW) ; claim row assign
  N K
  F K="claim_id","tx_kind","guide","tx_control","total_charge","from_date","thru_date","facility_code","claim_freq","claim_type","subscriber_name","subscriber_member_id","subscriber_dob","subscriber_sex","patient_name","patient_member_id","patient_dob","patient_sex","primary_payer_name","billing_provider_name","billing_provider_npi","attending_provider_name","attending_provider_id","diag_codes" D
@@ -283,17 +268,32 @@ PUSH(OUT,VAL) ; append parsed csv field
  S VAL=""
  Q
  ;
-WRROW(DEV,ROW) ; write one CSV row to the current device
- ; Notes:
- ;   - EXPORT() already OPEN/USEs the target file device.
- ;   - Re-USEing a pathname device here can resolve to a stale read-only
- ;     file handle on some GT.M/YottaDB runs after prior LOAD() calls.
- ;   - So this writer emits strictly to the current device.
+FEX(PATH) ; file exists helper
+ Q $S($ZSEARCH($G(PATH))'="":1,1:0)
+ ;
+READROW(LINE,DONE,ERR) ; EOF-safe CSV line reader for stream files
+ N $ETRAP,$ESTACK
+ S LINE=""
+ S $ETRAP="D RDERR^EFU837CAN"
+ R LINE:1
+ S $ETRAP=""
+ I '$T D  Q
+ . I $ZEOF S DONE=1 Q
+ . S ERR=1
+ I $ZEOF,LINE="" S DONE=1 Q
+ I $E(LINE,$L(LINE))=$C(13) S LINE=$E(LINE,1,$L(LINE)-1)
+ Q
+ ;
+RDERR ; read error trap helper for READROW
+ I $ZSTATUS["IOEOF" S DONE=1,$ECODE="" Q
+ S ERR=1,$ECODE="" Q
+ ;
+WRROW(ROW) ; write one CSV row to current device
  N I,MAX,OUT
  S OUT="",MAX=0
  S I=0 F  S I=$O(ROW(I)) Q:'I  S:I>MAX MAX=I
  F I=1:1:MAX D
- . I I>1 S OUT=OUT_","
+ . I I>1 S OUT=OUT_"," 
  . S OUT=OUT_$$CSVESC^EFU837U($G(ROW(I)))
  W OUT,!
  Q
