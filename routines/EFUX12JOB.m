@@ -12,8 +12,8 @@ EFUX12JOB ; efuzy x12 job artifact packaging helpers
  Q
  ;
 RUN837(INPATH,WORKBASE,JOBROOT,OPT,RES) ; standard 837 artifact job
- N PROOT,CROOT,BROOT,PRES,ERES,LRES,WRES,BRES,CRES
- N BUILD,RTCHECK,MODE,PSPATH,RTPATH,JMPATH,JOBID
+ N PROOT,CROOT,BROOT,PRES,ERES,LRES,WRES,BRES,CRES,TRES
+ N BUILD,RTCHECK,MODE,PSPATH,RTPATH,JMPATH,JOBID,TRPATH,TRON
  K RES
  I $G(JOBROOT)="" S JOBROOT=$NA(^TMP($J,"EFUX12JOB"))
  K @JOBROOT
@@ -26,7 +26,9 @@ RUN837(INPATH,WORKBASE,JOBROOT,OPT,RES) ; standard 837 artifact job
  S RTCHECK=$$BOOL($G(OPT("roundtrip")),0)
  I RTCHECK S BUILD=1
  S MODE=$$OPTVAL("compare_mode","export_safe",.OPT)
+ S TRON=$$BOOL($G(OPT("trace")),1)
  S @JOBROOT@("meta","compare_mode")=MODE
+ S @JOBROOT@("meta","trace_enabled")=TRON
  D STAGE(JOBROOT,"input_raw","input",INPATH,"edi",$$BNAME(INPATH))
  ; parse input
  S PROOT=$NA(@JOBROOT@("wrk","parse"))
@@ -35,6 +37,14 @@ RUN837(INPATH,WORKBASE,JOBROOT,OPT,RES) ; standard 837 artifact job
  I '+$G(PRES("ok")) D FAIL(JOBROOT,"parse_failed",$G(PRES("error"),"parse_failed")) G EXIT
  D COPYSUM(PROOT,JOBROOT,.PRES)
  D COPYPREV(PROOT,JOBROOT,+$$OPTVAL("preview_claim_limit",25,.OPT),+$$OPTVAL("preview_line_limit",200,.OPT))
+ I TRON,$T(BUILD^EFU837TRACE)'="" D
+ . D BUILD^EFU837TRACE(PROOT,.OPT,.TRES)
+ . M @JOBROOT@("step","trace")=TRES
+ . D COPYTRC(PROOT,JOBROOT,+$$OPTVAL("preview_claim_limit",25,.OPT),+$$OPTVAL("preview_line_limit",200,.OPT))
+ . S @JOBROOT@("summary","trace_fields")=+$G(TRES("fields"))
+ . S @JOBROOT@("summary","trace_segments")=+$G(TRES("segments"))
+ . S TRPATH=WORKBASE_"-trace.txt"
+ . I $$WRTRACE(TRPATH,JOBROOT) D STAGE(JOBROOT,"trace_report","trace",TRPATH,"text",$$BNAME(TRPATH))
  ; canonical export
  D EXPORT^EFU837CAN(PROOT,WORKBASE_"-canon",.ERES)
  M @JOBROOT@("step","export")=ERES
@@ -163,6 +173,27 @@ PREVL(PROOT,JOBROOT,CID,LN,LNOUT) ; one preview line row
  . S @JOBROOT@("preview","line",LNOUT,K)=$G(@PROOT@("norm","line",CID,LN,K))
  Q
  ;
+COPYTRC(PROOT,JOBROOT,CLIM,LLIM) ; copy compact claim/line trace rows for UI/audit views
+ N CID,CN,LN,LNOUT
+ K @JOBROOT@("trace")
+ M @JOBROOT@("trace","summary")=@PROOT@("trace","summary")
+ S CLIM=+$G(CLIM) I CLIM<1 S CLIM=25
+ S LLIM=+$G(LLIM) I LLIM<1 S LLIM=200
+ S CID=0,CN=0,LNOUT=0
+ F  S CID=$O(@PROOT@("trace","claim",CID)) Q:'CID!(CN>=CLIM)  D
+ . S CN=CN+1
+ . S @JOBROOT@("trace","claim",CN,"cid")=CID
+ . M @JOBROOT@("trace","claim",CN,"field")=@PROOT@("trace","claim",CID,"field")
+ . S LN=0
+ . F  S LN=$O(@PROOT@("trace","line",CID,LN)) Q:'LN!(LNOUT>=LLIM)  D
+ . . S LNOUT=LNOUT+1
+ . . S @JOBROOT@("trace","line",LNOUT,"cid")=CID
+ . . S @JOBROOT@("trace","line",LNOUT,"line")=LN
+ . . M @JOBROOT@("trace","line",LNOUT,"field")=@PROOT@("trace","line",CID,LN,"field")
+ S @JOBROOT@("trace","claims")=CN
+ S @JOBROOT@("trace","lines")=LNOUT
+ Q
+ ;
 DOCOMP(PROOT,BROOT,MODE,OPT,CRES) ; compare wrapper with backward compatibility
  K CRES
  I $T(COMPAREM^EFU837RT)'="" D  Q
@@ -207,6 +238,31 @@ WRRT(PATH,CRES) ; write round-trip comparison summary report
  C DEV U OLDIO
  Q 1
  ;
+WRTRACE(PATH,JOBROOT) ; write compact trace summary/report
+ N DEV,OLDIO,CN,LN,F
+ S DEV=PATH,OLDIO=$IO
+ O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+ I '$T Q 0
+ U DEV
+ W "trace_fields="_+$G(@JOBROOT@("summary","trace_fields")),!
+ W "trace_segments="_+$G(@JOBROOT@("summary","trace_segments")),!
+ S CN=0
+ F  S CN=$O(@JOBROOT@("trace","claim",CN)) Q:'CN  D
+ . S F=""
+ . F  S F=$O(@JOBROOT@("trace","claim",CN,"field",F)) Q:F=""  D
+ . . W "claim."_CN_"."_F_".segid="_$G(@JOBROOT@("trace","claim",CN,"field",F,"segid")),!
+ . . W "claim."_CN_"."_F_".segno="_+$G(@JOBROOT@("trace","claim",CN,"field",F,"segno")),!
+ . . W "claim."_CN_"."_F_".node="_$G(@JOBROOT@("trace","claim",CN,"field",F,"node")),!
+ S LN=0
+ F  S LN=$O(@JOBROOT@("trace","line",LN)) Q:'LN  D
+ . S F=""
+ . F  S F=$O(@JOBROOT@("trace","line",LN,"field",F)) Q:F=""  D
+ . . W "line."_LN_"."_F_".segid="_$G(@JOBROOT@("trace","line",LN,"field",F,"segid")),!
+ . . W "line."_LN_"."_F_".segno="_+$G(@JOBROOT@("trace","line",LN,"field",F,"segno")),!
+ . . W "line."_LN_"."_F_".node="_$G(@JOBROOT@("trace","line",LN,"field",F,"node")),!
+ C DEV U OLDIO
+ Q 1
+ ;
 WRJOB(PATH,JOBROOT,RES) ; write top-level job manifest/report
  N DEV,OLDIO,N,KEY
  S DEV=PATH,OLDIO=$IO
@@ -248,6 +304,8 @@ PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
  S ^MIO("EFUZY","job",JOBID,"stats","lines")=+$G(@JOBROOT@("summary","lines"))
  S ^MIO("EFUZY","job",JOBID,"stats","transactions")=+$G(@JOBROOT@("summary","transactions"))
  S ^MIO("EFUZY","job",JOBID,"stats","roundtripOk")=+$G(@JOBROOT@("summary","roundtrip_ok"))
+ S ^MIO("EFUZY","job",JOBID,"stats","traceFields")=+$G(@JOBROOT@("summary","trace_fields"))
+ S ^MIO("EFUZY","job",JOBID,"stats","traceSegments")=+$G(@JOBROOT@("summary","trace_segments"))
  S N=0
  F  S N=$O(@JOBROOT@("artifact_by_id",N)) Q:'N  D
  . S KEY=$G(@JOBROOT@("artifact_by_id",N)) Q:KEY=""
