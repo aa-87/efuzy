@@ -1,13 +1,19 @@
-EFUTESTS
-	;	
-	;	
-	D ^EFU837XCFGT
-	D ^EFU837SPECT
-	D ALL^EFUX12T("edi")
-	D STRICT837^EFUX12T("edi")
-	D EXAMPLES^EFU837T("edi")
-	D ALL^EFU837T("edi")
-	D ^EFU837GOLDT
-	D ^EFU837WVALT
-	D ^EFUX12PERFT
-	Q
+EFUTESTS ; efuzy parser/export umbrella tests
+ ; Quiet on success by delegated suites.
+ ;
+ D START
+ Q
+ ;
+START ; run current additive suite set
+ D ^EFU837XCFGT
+ D ^EFU837SPECT
+ D ALL^EFUX12T("edi")
+ D STRICT837^EFUX12T("edi")
+ D EXAMPLES^EFU837T("edi")
+ D ALL^EFU837T("edi")
+ D ^EFU837GOLDT
+ D ^EFU837WVALT
+ D ^EFUX12PERFT
+ D ^EFU837RTT
+ Q
+ ;

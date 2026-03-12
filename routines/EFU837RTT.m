@@ -16,6 +16,10 @@ ALL(FAIL) ; full suite
  D T711(.FAIL)
  D T712(.FAIL)
  D T720(.FAIL)
+ D T730(.FAIL)
+ D T731(.FAIL)
+ D T732(.FAIL)
+ D T733(.FAIL)
  Q
  ;
 T700(FAIL) ; canonical export/load from valid 837P sample
@@ -58,6 +62,80 @@ T720(FAIL) ; deterministic writer output for same canonical package
  D EQ(.FAIL,"[T720][same bytes]",A=B,1)
  K @ROOT Q
  ;
+T730(FAIL) ; compare modes all succeed on identical structures
+ N AROOT,BROOT,OPT,RES
+ D PARSEFIX("GP040",$NA(^TMP($J,"EFU837RTT",730,"A")),.OPT,.RES)
+ D PARSEFIX("GP040",$NA(^TMP($J,"EFU837RTT",730,"B")),.OPT,.RES)
+ S AROOT=$NA(^TMP($J,"EFU837RTT",730,"A"))
+ S BROOT=$NA(^TMP($J,"EFU837RTT",730,"B"))
+ D COMPAREM^EFU837RT(AROOT,BROOT,"core",.OPT,.RES)
+ D EQ(.FAIL,"[T730][core ok]",+$G(RES("ok")),1)
+ D EQ(.FAIL,"[T730][core mode]",$G(RES("compare_mode")),"core")
+ D EQ(.FAIL,"[T730][core mismatches]",+$G(RES("summary","mismatch_count")),0)
+ D COMPAREM^EFU837RT(AROOT,BROOT,"export_safe",.OPT,.RES)
+ D EQ(.FAIL,"[T730][safe ok]",+$G(RES("ok")),1)
+ D EQ(.FAIL,"[T730][safe mode]",$G(RES("compare_mode")),"export_safe")
+ D COMPAREM^EFU837RT(AROOT,BROOT,"strict",.OPT,.RES)
+ D EQ(.FAIL,"[T730][strict ok]",+$G(RES("ok")),1)
+ D EQ(.FAIL,"[T730][strict mode]",$G(RES("compare_mode")),"strict_structural")
+ K @AROOT,@BROOT Q
+ ;
+T731(FAIL) ; strict-only fields fail only in strict_structural mode
+ N AROOT,BROOT,OPT,RES
+ D PARSEFIX("GP020",$NA(^TMP($J,"EFU837RTT",731,"A")),.OPT,.RES)
+ D PARSEFIX("GP020",$NA(^TMP($J,"EFU837RTT",731,"B")),.OPT,.RES)
+ S AROOT=$NA(^TMP($J,"EFU837RTT",731,"A"))
+ S BROOT=$NA(^TMP($J,"EFU837RTT",731,"B"))
+ D ENSURE^EFU837RT(AROOT,.RES)
+ D ENSURE^EFU837RT(BROOT,.RES)
+ S @BROOT@("norm","claim",1,"patient_name")="BROKEN, NAME"
+ D COMPAREM^EFU837RT(AROOT,BROOT,"core",.OPT,.RES)
+ D EQ(.FAIL,"[T731][core ok]",+$G(RES("ok")),1)
+ D COMPAREM^EFU837RT(AROOT,BROOT,"export_safe",.OPT,.RES)
+ D EQ(.FAIL,"[T731][safe ok]",+$G(RES("ok")),1)
+ D COMPAREM^EFU837RT(AROOT,BROOT,"strict_structural",.OPT,.RES)
+ D EQ(.FAIL,"[T731][strict fails]",+$G(RES("ok")),0)
+ D EQ(.FAIL,"[T731][strict field]",$D(RES("mismatch","claim","GP020C1","patient_name"))>0,1)
+ K @AROOT,@BROOT Q
+ ;
+T732(FAIL) ; export-safe fields fail in export_safe and strict, not core
+ N AROOT,BROOT,OPT,RES
+ D PARSEFIX("GP020",$NA(^TMP($J,"EFU837RTT",732,"A")),.OPT,.RES)
+ D PARSEFIX("GP020",$NA(^TMP($J,"EFU837RTT",732,"B")),.OPT,.RES)
+ S AROOT=$NA(^TMP($J,"EFU837RTT",732,"A"))
+ S BROOT=$NA(^TMP($J,"EFU837RTT",732,"B"))
+ D ENSURE^EFU837RT(AROOT,.RES)
+ D ENSURE^EFU837RT(BROOT,.RES)
+ S @BROOT@("norm","claim",1,"patient_member_id")="WRONGID"
+ D COMPAREM^EFU837RT(AROOT,BROOT,"core",.OPT,.RES)
+ D EQ(.FAIL,"[T732][core ok]",+$G(RES("ok")),1)
+ D COMPAREM^EFU837RT(AROOT,BROOT,"export_safe",.OPT,.RES)
+ D EQ(.FAIL,"[T732][safe fails]",+$G(RES("ok")),0)
+ D EQ(.FAIL,"[T732][safe field]",$D(RES("mismatch","claim","GP020C1","patient_member_id"))>0,1)
+ D COMPAREM^EFU837RT(AROOT,BROOT,"strict",.OPT,.RES)
+ D EQ(.FAIL,"[T732][strict fails]",+$G(RES("ok")),0)
+ K @AROOT,@BROOT Q
+ ;
+T733(FAIL) ; extra keys on right side are reported cleanly
+ N AROOT,BROOT,OPT,RES
+ D PARSEFIX("GP001",$NA(^TMP($J,"EFU837RTT",733,"A")),.OPT,.RES)
+ D PARSEFIX("GP001",$NA(^TMP($J,"EFU837RTT",733,"B")),.OPT,.RES)
+ S AROOT=$NA(^TMP($J,"EFU837RTT",733,"A"))
+ S BROOT=$NA(^TMP($J,"EFU837RTT",733,"B"))
+ D ENSURE^EFU837RT(AROOT,.RES)
+ D ENSURE^EFU837RT(BROOT,.RES)
+ S @BROOT@("norm","claim",99,"claim_id")="EXTRA-C1"
+ S @BROOT@("norm","claim",99,"tx_kind")="837P"
+ S @BROOT@("norm","claim",99,"guide")="005010X222A1"
+ S @BROOT@("norm","claim",99,"total_charge")="1"
+ S @BROOT@("norm","claim",99,"from_date")="20260311"
+ S @BROOT@("norm","claim",99,"thru_date")="20260311"
+ S @BROOT@("norm","claim",99,"line_count")=0
+ D COMPAREM^EFU837RT(AROOT,BROOT,"export_safe",.OPT,.RES)
+ D EQ(.FAIL,"[T733][fails]",+$G(RES("ok")),0)
+ D EQ(.FAIL,"[T733][claim extra]",+$G(RES("missing","claim_extra","EXTRA-C1")),1)
+ K @AROOT,@BROOT Q
+ ;
 DOTRT(FAIL,N,DATA,EXPCLM,EXPLIN,EXPTX,EXPSV) ; round-trip helper
  N PATH,ROOT,OPT,RES,BASE,RROOT,CID,LN
  S PATH=$$WRFILE($G(DATA))
@@ -67,11 +145,19 @@ DOTRT(FAIL,N,DATA,EXPCLM,EXPLIN,EXPTX,EXPSV) ; round-trip helper
  D EQ(.FAIL,"[T"_N_"][rt ok]",+$G(RES("ok")),1)
  D EQ(.FAIL,"[T"_N_"][src claims]",+$G(RES("parse_src","claims")),+EXPCLM)
  D EQ(.FAIL,"[T"_N_"][rebuilt claims]",+$G(RES("claims")),+EXPCLM)
+ D EQ(.FAIL,"[T"_N_"][mode]",$G(RES("compare_mode")),"export_safe")
  S RROOT=$NA(@ROOT@("rebuilt"))
  S CID=$O(@RROOT@("norm","claim",0))
  S LN=$O(@RROOT@("norm","line",CID,0))
  D EQ(.FAIL,"[T"_N_"][tx kind]",$G(@RROOT@("norm","claim",CID,"tx_kind")),$G(EXPTX))
  D EQ(.FAIL,"[T"_N_"][svc kind]",$G(@RROOT@("norm","line",CID,LN,"service_kind")),$G(EXPSV))
+ Q
+ ;
+PARSEFIX(ID,ROOT,OPT,RES) ; parse embedded golden fixture into ROOT
+ N PATH
+ K @ROOT
+ S PATH=$$WRFILE($$DATA^EFU837GOLD($G(ID)))
+ D PARSE^EFU837P(PATH,ROOT,.OPT,.RES)
  Q
  ;
 EQ(FAIL,LABEL,GOT,EXP)
