@@ -1,4 +1,4 @@
-EFU837VR ; efuzy X12 837 rule-driven validator v1
+EFU837VR ; efuzy X12 837 rule-driven validator v2
  ;
  ; Public:
  ;   RUN(ROOT,.OPT,.RES)
@@ -29,6 +29,8 @@ RUN(ROOT,OPT,RES) ; validate one parsed 837 root using EFU837SPEC + EFUX12DIAG
  D PASSGUIDE(ROOT,MODE)
  D PASSCLAIM(ROOT,MODE)
  D PASSDATA(ROOT,MODE)
+ D PASSPARTY(ROOT,MODE)
+ D PASSBAL(ROOT,MODE)
  D SUMMARY^EFUX12DIAG(ROOT,.RES)
  S RES("mode")=MODE
  Q
@@ -149,7 +151,83 @@ PASSDATA(ROOT,MODE) ; basic date/amount sanity
  . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_AMOUNT","Service line charge amount is not numeric",.CTX)
  Q
  ;
-EMIT(ROOT,MODE,CODE,MSG,CTX) ; severity by mode for envelope/control style findings
+PASSPARTY(ROOT,MODE) ; subscriber/patient data presence checks
+ N CID,TX,G,SKEY,PKEY,CTX
+ S CID=0
+ F  S CID=$O(@ROOT@("model","claim",CID)) Q:'CID  D
+ . S TX=+$G(@ROOT@("model","claim",CID,"tx_id"))
+ . S G=$G(@ROOT@("model","tx",TX,"guide"))
+ . S SKEY=$G(@ROOT@("model","claim",CID,"subscriber_id"))
+ . I $$DATAREQ^EFU837SPEC(G,"subscriber_id"),SKEY="" D  Q
+ . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_ID","Subscriber loop is missing a stable identifier",.CTX)
+ . I SKEY'="",'$D(@ROOT@("model","party",SKEY)) D
+ . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_PARTY","Subscriber party could not be resolved from parsed content",.CTX)
+ . I SKEY'="",$$DATAREQ^EFU837SPEC(G,"subscriber_id"),$D(@ROOT@("model","party",SKEY)),$G(@ROOT@("model","party",SKEY,"id_code"))="" D
+ . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_ID","Subscriber NM109 is missing",.CTX)
+ . I SKEY'="",$$DATAREQ^EFU837SPEC(G,"subscriber_name"),$D(@ROOT@("model","party",SKEY)),$$BLANKNM(ROOT,SKEY) D
+ . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_NAME","Subscriber name is missing",.CTX)
+ . S PKEY=$G(@ROOT@("model","claim",CID,"patient_id"))
+ . I $$ISDIST(PKEY) D
+ . . I '$D(@ROOT@("model","party",PKEY)) D  Q
+ . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
+ . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_PARTY","Distinct patient loop could not be resolved from parsed content",.CTX)
+ . . I $$DATAREQ^EFU837SPEC(G,"patient_id_if_distinct"),$G(@ROOT@("model","party",PKEY,"id_code"))="" D
+ . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
+ . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_ID","Distinct patient NM109 is missing",.CTX)
+ . . I $$DATAREQ^EFU837SPEC(G,"patient_name_if_distinct"),$$BLANKNM(ROOT,PKEY) D
+ . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
+ . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_NAME","Distinct patient name is missing",.CTX)
+ Q
+ ;
+PASSBAL(ROOT,MODE) ; claim total should match sum of service line charges
+ N CID,TX,G,CLA,SUM,LN,LAMT,OK,TOL,CTX
+ S CID=0
+ F  S CID=$O(@ROOT@("model","claim",CID)) Q:'CID  D
+ . S TX=+$G(@ROOT@("model","claim",CID,"tx_id"))
+ . S G=$G(@ROOT@("model","tx",TX,"guide"))
+ . I '$$DATAREQ^EFU837SPEC(G,"claim_total_balance") Q
+ . S CLA=$$AMTN($G(@ROOT@("model","claim",CID,"claim_amount")))
+ . I CLA="" Q
+ . I +$O(@ROOT@("model","line",CID,0))=0 Q
+ . S SUM=0,OK=1,LN=0
+ . F  S LN=$O(@ROOT@("model","line",CID,LN)) Q:'LN  D  Q:'OK
+ . . S LAMT=$$AMTN($G(@ROOT@("model","line",CID,LN,"charge_amount")))
+ . . I LAMT="" S OK=0 Q
+ . . S SUM=SUM+LAMT
+ . I 'OK Q
+ . S TOL=$$BALTOL^EFU837SPEC(G)
+ . I $$ABS(CLA-SUM)>TOL D
+ . . K CTX
+ . . S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("loop_id")="2300",CTX("segment_id")="CLM"
+ . . S CTX("claim_amount")=$G(@ROOT@("model","claim",CID,"claim_amount"))
+ . . S CTX("line_sum")=SUM
+ . . S CTX("tolerance")=TOL
+ . . D EMIT(ROOT,MODE,"X12_CLAIM_TOTAL_MISMATCH","Claim total does not match sum of service line charges",.CTX)
+ Q
+ ;
+BLANKNM(ROOT,PKEY) ; whether party has no usable name components
+ Q $S($G(@ROOT@("model","party",$G(PKEY),"last_name"))'="":0,$G(@ROOT@("model","party",$G(PKEY),"first_name"))'="":0,1:1)
+ ;
+ISDIST(PKEY) ; whether model party id is a distinct patient key
+ Q $S($E($G(PKEY),1,8)="patient:":1,1:0)
+ ;
+AMTN(X) ; numeric amount or empty string if not parseable
+ N Y
+ S Y=$G(X)
+ I Y?1"-".N Q +Y
+ I Y?.N Q +Y
+ I Y?1"-".N1".".N Q +Y
+ I Y?.N1".".N Q +Y
+ Q ""
+ ;
+ABS(X) ; absolute value
+ Q $S(+$G(X)<0:-+$G(X),1:+$G(X))
+ ;
+EMIT(ROOT,MODE,CODE,MSG,CTX) ; severity by mode for downgradable findings
  I MODE="lenient" D WARN^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX) Q
  D ERR^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX)
  Q

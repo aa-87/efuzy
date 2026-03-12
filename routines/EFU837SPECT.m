@@ -21,6 +21,8 @@ START ; default entry
 ALL(FAIL) ; full validation-core suite
 	D T500(.FAIL)
 	D T501(.FAIL)
+	D T505(.FAIL)
+	D T506(.FAIL)
 	D T510(.FAIL)
 	D T511(.FAIL)
 	D T512(.FAIL)
@@ -29,6 +31,13 @@ ALL(FAIL) ; full validation-core suite
 	D T530(.FAIL)
 	D T540(.FAIL)
 	D T550(.FAIL)
+	D T560(.FAIL)
+	D T561(.FAIL)
+	D T570(.FAIL)
+	D T571(.FAIL)
+	D T572(.FAIL)
+	D T580(.FAIL)
+	D T581(.FAIL)
 	Q
 	;
 T500(FAIL) ; guide -> kind mapping
@@ -41,6 +50,16 @@ T501(FAIL) ; guide -> required service segment
 	D EQ(.FAIL,"[T501][x222 svc]",$$REQSVC^EFU837SPEC("005010X222A1"),"SV1")
 	D EQ(.FAIL,"[T501][x223 svc]",$$REQSVC^EFU837SPEC("005010X223A2"),"SV2")
 	D EQ(.FAIL,"[T501][x224 svc]",$$REQSVC^EFU837SPEC("005010X224A2"),"SV3")
+	Q
+	;
+T505(FAIL) ; data rules present for parser-correctness checks
+	D EQ(.FAIL,"[T505][bal rule]",$$DATAREQ^EFU837SPEC("005010X222A1","claim_total_balance"),1)
+	D EQ(.FAIL,"[T505][sub id rule]",$$DATAREQ^EFU837SPEC("005010X222A1","subscriber_id"),1)
+	D EQ(.FAIL,"[T505][pat id rule]",$$DATAREQ^EFU837SPEC("005010X222A1","patient_id_if_distinct"),1)
+	Q
+	;
+T506(FAIL) ; balance tolerance exposed by spec
+	D EQ(.FAIL,"[T506][tol > 0]",$$BALTOL^EFU837SPEC("005010X222A1")>0,1)
 	Q
 	;
 T510(FAIL) ; valid 837P passes validator and builds model
@@ -132,6 +151,79 @@ T550(FAIL) ; validator diagnostics carry shape/context
 	D EQ(.FAIL,"[T550][first severity]",$G(@ROOT@("vdiag","item",1,"severity"))'="",1)
 	K @ROOT Q
 	;
+T560(FAIL) ; strict mode flags claim total mismatch as error
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",560))
+	S PATH=$$WRFILE($$SAMPLEBALBAD())
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D RUN^EFU837VR(ROOT,.OPT,.RES)
+	D EQ(.FAIL,"[T560][ok false]",+$G(RES("ok")),0)
+	D EQ(.FAIL,"[T560][bal mismatch err]",$$HASV(ROOT,"error","X12_CLAIM_TOTAL_MISMATCH"),1)
+	K @ROOT Q
+	;
+T561(FAIL) ; lenient mode downgrades claim total mismatch to warning
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",561))
+	S PATH=$$WRFILE($$SAMPLEBALBAD())
+	S OPT("lenient")=1
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D LENIENT^EFU837VR(ROOT,.RES)
+	D EQ(.FAIL,"[T561][ok true]",+$G(RES("ok")),1)
+	D EQ(.FAIL,"[T561][bal mismatch warn]",$$HASV(ROOT,"warn","X12_CLAIM_TOTAL_MISMATCH"),1)
+	K @ROOT Q
+	;
+T570(FAIL) ; strict mode flags missing subscriber id
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",570))
+	S PATH=$$WRFILE($$SAMPLESUBNOID())
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D RUN^EFU837VR(ROOT,.OPT,.RES)
+	D EQ(.FAIL,"[T570][ok false]",+$G(RES("ok")),0)
+	D EQ(.FAIL,"[T570][sub id err]",$$HASV(ROOT,"error","X12_SUBSCRIBER_MISSING_ID"),1)
+	K @ROOT Q
+	;
+T571(FAIL) ; lenient mode downgrades missing subscriber id
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",571))
+	S PATH=$$WRFILE($$SAMPLESUBNOID())
+	S OPT("lenient")=1
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D LENIENT^EFU837VR(ROOT,.RES)
+	D EQ(.FAIL,"[T571][ok true]",+$G(RES("ok")),1)
+	D EQ(.FAIL,"[T571][sub id warn]",$$HASV(ROOT,"warn","X12_SUBSCRIBER_MISSING_ID"),1)
+	K @ROOT Q
+	;
+T572(FAIL) ; strict mode flags missing subscriber name
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",572))
+	S PATH=$$WRFILE($$SAMPLESUBNONAME())
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D RUN^EFU837VR(ROOT,.OPT,.RES)
+	D EQ(.FAIL,"[T572][ok false]",+$G(RES("ok")),0)
+	D EQ(.FAIL,"[T572][sub name err]",$$HASV(ROOT,"error","X12_SUBSCRIBER_MISSING_NAME"),1)
+	K @ROOT Q
+	;
+T580(FAIL) ; distinct patient without id is an error
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",580))
+	S PATH=$$WRFILE($$SAMPLEPATNOID())
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D RUN^EFU837VR(ROOT,.OPT,.RES)
+	D EQ(.FAIL,"[T580][ok false]",+$G(RES("ok")),0)
+	D EQ(.FAIL,"[T580][patient id err]",$$HASV(ROOT,"error","X12_PATIENT_MISSING_ID"),1)
+	K @ROOT Q
+	;
+T581(FAIL) ; valid distinct patient passes without patient-id error
+	N ROOT,RES,OPT,PATH
+	S ROOT=$NA(^TMP($J,"EFU837SPECT",581))
+	S PATH=$$WRFILE($$SAMPLEPATOK())
+	D PARSEONLY^EFU837P(PATH,ROOT,.OPT,.RES)
+	D RUN^EFU837VR(ROOT,.OPT,.RES)
+	D EQ(.FAIL,"[T581][ok true]",+$G(RES("ok")),1)
+	D EQ(.FAIL,"[T581][no patient id err]",$$HASV(ROOT,"error","X12_PATIENT_MISSING_ID"),0)
+	D EQ(.FAIL,"[T581][patient key]",$E($G(@ROOT@("model","claim",1,"patient_id")),1,8),"patient:")
+	K @ROOT Q
+	;
 EQ(FAIL,LABEL,GOT,EXP) ; equality assert
 	I $G(GOT)=$G(EXP) Q
 	S FAIL=1
@@ -170,6 +262,21 @@ SAMPLEBAD() ; 837I guide carrying professional service segment
 	;
 SAMPLENOCLM() ; transaction with service content but no claim
 	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*0~SBR*P*18*******MC~NM1*IL*1*DOE*JOHN****MI*12345~LX*1~SV1*HC:99213*100*UN*1***1~DTP*472*D8*20260311~SE*13*1~"
+	;
+SAMPLEBALBAD() ; claim total does not match service line total
+	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*0~SBR*P*18*******MC~NM1*IL*1*DOE*JOHN****MI*12345~CLM*PCN2*100***11:B:1*Y*A*Y*Y~DTP*434*D8*20260311~LX*1~SV1*HC:99213*60*UN*1***1~DTP*472*D8*20260311~SE*15*1~"
+	;
+SAMPLESUBNOID() ; subscriber loop missing NM109
+	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*0~SBR*P*18*******MC~NM1*IL*1*DOE*JOHN****MI*~CLM*PCN3*100***11:B:1*Y*A*Y*Y~DTP*434*D8*20260311~LX*1~SV1*HC:99213*100*UN*1***1~DTP*472*D8*20260311~SE*15*1~"
+	;
+SAMPLESUBNONAME() ; subscriber loop missing name but still has id
+	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*0~SBR*P*18*******MC~NM1*IL*1******MI*12345~CLM*PCN4*100***11:B:1*Y*A*Y*Y~DTP*434*D8*20260311~LX*1~SV1*HC:99213*100*UN*1***1~DTP*472*D8*20260311~SE*15*1~"
+	;
+SAMPLEPATNOID() ; distinct patient loop without NM109
+	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*1~SBR*P*18*******MC~NM1*IL*1*SUBSCRIBER*SAM****MI*SUB123~DMG*D8*19800101*M~HL*3*2*23*0~PAT*19~NM1*IL*1*PATIENT*JILL****MI*~DMG*D8*20100101*F~CLM*PCN5*75***11:B:1*Y*A*Y*Y~DTP*434*D8*20260311~LX*1~SV1*HC:99212*75*UN*1***1~DTP*472*D8*20260311~SE*19*1~"
+	;
+SAMPLEPATOK() ; valid distinct patient loop
+	Q "ST*837*1*005010X222A1~BHT*0019*00*ABC*20260311*1200*CH~HL*1**20*1~NM1*41*2*SUBMITTER*****46*123~NM1*40*2*RECEIVER*****46*999~HL*2*1*22*1~SBR*P*18*******MC~NM1*IL*1*SUBSCRIBER*SAM****MI*SUB123~DMG*D8*19800101*M~HL*3*2*23*0~PAT*19~NM1*IL*1*PATIENT*JILL****MI*PAT123~DMG*D8*20100101*F~CLM*PCN6*75***11:B:1*Y*A*Y*Y~DTP*434*D8*20260311~LX*1~SV1*HC:99212*75*UN*1***1~DTP*472*D8*20260311~SE*19*1~"
 	;
 WRAPISA(TX,HASIEA) ; wrap transaction in ISA/GS envelope, optionally omit IEA
 	N X

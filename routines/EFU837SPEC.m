@@ -1,4 +1,4 @@
-EFU837SPEC ; efuzy X12 837 rule tables v1
+EFU837SPEC ; efuzy X12 837 rule tables v2
  ;
  ; Public:
  ;   LOAD(GUIDE,.SPEC)
@@ -9,6 +9,8 @@ EFU837SPEC ; efuzy X12 837 rule tables v1
  ;   SEGMAX(GUIDE,LOOP,SEG)
  ;   LOOPREQ(GUIDE,LOOP,SEG)
  ;   ALLOW(GUIDE,LOOP,SEG)
+ ;   DATAREQ(GUIDE,KEY) ; semantic/data requirement by guide
+ ;   BALTOL(GUIDE)      ; claim/line balance tolerance
  ;
  Q
  ;
@@ -23,6 +25,7 @@ LOAD(GUIDE,SPEC) ; materialize one guide rule table into SPEC
  D ENV(.SPEC)
  D BASE(.SPEC)
  D FLAVOR(G,.SPEC)
+ D DATA(G,.SPEC)
  Q
  ;
 KIND(GUIDE) ; guide => claim flavor
@@ -83,6 +86,19 @@ ALLOW(GUIDE,LOOP,SEG) ; whether segment is allowed in loop for guide
  . S R=$S(S="LX":1,S="DTP":1,S="REF":1,S="SV1":1,S="SV2":1,S="SV3":1,1:0)
  Q 0
  ;
+DATAREQ(GUIDE,KEY) ; semantic/data requirement by guide
+ N K
+ S K=$$LC($G(KEY))
+ I K="claim_total_balance" Q 1
+ I K="subscriber_id" Q 1
+ I K="subscriber_name" Q 1
+ I K="patient_id_if_distinct" Q 1
+ I K="patient_name_if_distinct" Q 1
+ Q 0
+ ;
+BALTOL(GUIDE) ; claim/line balance tolerance
+ Q .01
+ ;
 ENV(SPEC) ; envelope defaults
  S SPEC("env","strict","require_isa")=1
  S SPEC("env","strict","require_iea")=1
@@ -125,6 +141,15 @@ FLAVOR(GUIDE,SPEC) ; flavor-specific required service rules
  I K="837I" S SPEC("flavor")="institutional" Q
  I K="837D" S SPEC("flavor")="dental" Q
  S SPEC("flavor")="unknown"
+ Q
+ ;
+DATA(GUIDE,SPEC) ; data-quality defaults that validator can enforce
+ S SPEC("data","claim_total_balance")=1
+ S SPEC("data","subscriber_id")=1
+ S SPEC("data","subscriber_name")=1
+ S SPEC("data","patient_id_if_distinct")=1
+ S SPEC("data","patient_name_if_distinct")=1
+ S SPEC("data","balance_tolerance")=$$BALTOL($G(GUIDE))
  Q
  ;
 NORMG(X) ; normalize guide string
