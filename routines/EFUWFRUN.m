@@ -3,7 +3,7 @@ EFUWFRUN ; workflow execution
  Q
  ;
 RUN(CONF,JOBID,ERR)
- N FILEID,PATH,PROFID,PARSE,OUTPATH
+ N FILEID,PATH,PROFID,OUTPATH
  K ERR
  I '$D(^MIO("EFUZY","job",+JOBID)) S ERR("error")="job_not_found" Q 0
  S FILEID=$G(^MIO("EFUZY","job",JOBID,"fileId"))
@@ -13,7 +13,9 @@ RUN(CONF,JOBID,ERR)
  D START^EFUZYJOB(JOBID)
  I '$$PARSE^EFU837(PATH,JOBID,.ERR) D  Q 0
  . D FINERR^EFUZYJOB(JOBID,$G(ERR("error"),"parse_failed"))
- I '$$MAKE^EFU837CSV(.CONF,JOBID,PROFID,.OUTPATH,.ERR) D  Q 0
+ ; Use the builder routine that the CSV tests exercise directly.
+ ; This avoids the EFU837CSV / EFU837CSV2 routine-name split.
+ I '$$MAKE^EFU837CSV2(.CONF,JOBID,PROFID,.OUTPATH,.ERR) D  Q 0
  . D FINERR^EFUZYJOB(JOBID,$G(ERR("error"),"export_failed"))
  S ^MIO("EFUZY","job",JOBID,"outputPath")=OUTPATH
  S ^MIO("EFUZY","job",JOBID,"outputName")=$P(OUTPATH,"/",$L(OUTPATH,"/"))

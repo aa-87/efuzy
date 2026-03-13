@@ -143,6 +143,7 @@ HISTORYH(DEV,CONF,REQ,CTX) ; thin route/controller wrapper
  S OPT("limit")=+$$RQVAL("limit",.REQ)
  S OPT("status")=$$RQVAL("status",.REQ)
  S OPT("workflow")=$$RQVAL("workflow",.REQ)
+ S OPT("start_after")=+$$RQVAL("start_after",.REQ)
  D HISTORY(ROOT,.OPT,.RES)
  S CTX("x12","root")=ROOT
  S CTX("status")=+$G(RES("http_status"))
@@ -186,7 +187,7 @@ BLDLIVE(JROOT,WEBROOT,MODE,OPT,RES) ; build response from live job root
  Q
  ;
 BLDPUB(JID,WEBROOT,OPT,RES) ; build response from published ^MIO job record
- N HS
+ N HS,FULL
  S HS=$S($G(^MIO("EFUZY","job",JID,"status"))="completed":200,$G(^MIO("EFUZY","job",JID,"status"))="failed":422,1:200)
  S @WEBROOT@("http","status")=HS
  S @WEBROOT@("response","ok")=$S(HS=200:1,1:0)
@@ -198,9 +199,17 @@ BLDPUB(JID,WEBROOT,OPT,RES) ; build response from published ^MIO job record
  S @WEBROOT@("response","summary","claims")=+$G(^MIO("EFUZY","job",JID,"stats","claims"))
  S @WEBROOT@("response","summary","lines")=+$G(^MIO("EFUZY","job",JID,"stats","lines"))
  S @WEBROOT@("response","summary","transactions")=+$G(^MIO("EFUZY","job",JID,"stats","transactions"))
+ S @WEBROOT@("response","summary","segments")=+$G(^MIO("EFUZY","job",JID,"stats","segments"))
+ S @WEBROOT@("response","summary","warnings")=+$G(^MIO("EFUZY","job",JID,"warningCount"))
+ S @WEBROOT@("response","summary","errors")=+$G(^MIO("EFUZY","job",JID,"errorCount"))
  S @WEBROOT@("response","summary","roundtrip_ok")=+$G(^MIO("EFUZY","job",JID,"stats","roundtripOk"))
+ I $D(^MIO("EFUZY","job",JID,"preview")) M @WEBROOT@("response","preview")=^MIO("EFUZY","job",JID,"preview")
+ D ADDPUBDIAG(JID,WEBROOT,+$G(OPT("diag_limit")))
  S @WEBROOT@("response","trace","summary","fields")=+$G(^MIO("EFUZY","job",JID,"stats","traceFields"))
  S @WEBROOT@("response","trace","summary","segments")=+$G(^MIO("EFUZY","job",JID,"stats","traceSegments"))
+ S FULL=0 I +$G(OPT("include_trace")) S FULL=1
+ I FULL,$D(^MIO("EFUZY","job",JID,"trace","claim")) M @WEBROOT@("response","trace","claim")=^MIO("EFUZY","job",JID,"trace","claim")
+ I FULL,$D(^MIO("EFUZY","job",JID,"trace","line")) M @WEBROOT@("response","trace","line")=^MIO("EFUZY","job",JID,"trace","line")
  D ADDPUBART(JID,WEBROOT)
  M RES=@WEBROOT@("response")
  S RES("http_status")=HS
@@ -277,6 +286,18 @@ ADDPUBART(JID,WEBROOT) ; artifact list from published job record
  . S @WEBROOT@("response","download",D,"type")=$G(^MIO("EFUZY","job",JID,"artifact",KEY,"type"))
  . S @WEBROOT@("response","download",D,"name")=$G(^MIO("EFUZY","job",JID,"artifact",KEY,"name"))
  S @WEBROOT@("response","downloads")=D
+ Q
+ ;
+ADDPUBDIAG(JID,WEBROOT,LIM) ; copy published diagnostics
+ N TYPE,N,OUT
+ S LIM=+$G(LIM) I LIM<1 S LIM=25
+ F TYPE="error","warning" D
+ . S N=0,OUT=0
+ . F  S N=$O(^MIO("EFUZY","job",JID,"diag",TYPE,N)) Q:'N!(OUT>=LIM)  D
+ . . S OUT=OUT+1
+ . . I $D(^MIO("EFUZY","job",JID,"diag",TYPE,N,"msg")) M @WEBROOT@("response","diagnostic",TYPE,OUT)=^MIO("EFUZY","job",JID,"diag",TYPE,N)
+ . . E  S @WEBROOT@("response","diagnostic",TYPE,OUT,"msg")=$G(^MIO("EFUZY","job",JID,"diag",TYPE,N))
+ . S @WEBROOT@("response","diagnostic",TYPE_"s")=OUT
  Q
  ;
 FAILRESP(WEBROOT,HS,CODE,MSG) ; standard error payload

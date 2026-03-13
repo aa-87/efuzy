@@ -21,8 +21,8 @@ T001 ; seed creates default profiles
  S CNT=0,ID=0
  F  S ID=$O(^MIO("EFUZY","cfg","profile",ID)) Q:'ID  S CNT=CNT+1
  D EQ^MIOTASSERT(CNT,2,"[T001][profile count]")
- D OK^MIOTASSERT($D(^MIO("EFUZY","idx","profile","name","claim summary")),"[T001][claim summary index]")
- D OK^MIOTASSERT($D(^MIO("EFUZY","idx","profile","name","service line")),"[T001][service line index]")
+ D OK^MIOTASSERT($D(^MIO("EFUZY","idx","profile","name","claim summary"))>0,"[T001][claim summary index]")
+ D OK^MIOTASSERT($D(^MIO("EFUZY","idx","profile","name","service line"))>0,"[T001][service line index]")
  Q
  ;
 T002 ; save and get profile
@@ -53,7 +53,7 @@ T003 ; delete profile
  D RESET^EFUZYTESTU("")
  S POST("name")="Delete Me"
  D OK^MIOTASSERT($$SAVE^EFUZYCFG(.CONF,.POST,.ID,.ERR),"[T003][save ok]")
- D OK^MIOTASSERT($D(^MIO("EFUZY","cfg","profile",ID)),"[T003][profile exists]")
+ D OK^MIOTASSERT($D(^MIO("EFUZY","cfg","profile",ID))>0,"[T003][profile exists]")
  D OK^MIOTASSERT($$DELPROF^EFUZYCFG(.CONF,ID,.ERR),"[T003][delete ok]")
  D OK^MIOTASSERT('$D(^MIO("EFUZY","cfg","profile",ID)),"[T003][profile deleted]")
  Q

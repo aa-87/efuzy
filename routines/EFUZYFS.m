@@ -5,7 +5,7 @@ EFUZYFS ; efuzy filesystem helpers
 ROOT(CONF)
 	N R
 	S R=$G(CONF("efuzy","rootDir"))
-	I R="" S R="."
+	I R="" S R="/tmp/efuzy"
 	Q R
 	;
 UPLOADDIR(CONF)
@@ -62,8 +62,8 @@ SAFEFN(FN)
 	;
 LOADFILES(CONF,LIMIT,TCTX)
 	N ID,N
-	S N=0,ID=0
-	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:'ID!(N>=+$G(LIMIT))  D
+	S N=0,ID=""
+	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:ID=""!(N>=+$G(LIMIT))  D
 	. S N=N+1
 	. S TCTX("files",N,"id")=ID
 	. S TCTX("files",N,"name")=$G(^MIO("EFUZY","file",ID,"name"))

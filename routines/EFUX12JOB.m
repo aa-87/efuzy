@@ -292,10 +292,12 @@ WRJOB(PATH,JOBROOT,RES) ; write top-level job manifest/report
  Q 1
  ;
 PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
- N KEY,N
+ N KEY,N,ST,DROOT
  I +$G(JOBID)<1 Q
+ S ST=$G(@JOBROOT@("meta","status"))
+ I $T(SETST^EFUZYJOB)'="" D SETST^EFUZYJOB(JOBID,ST)
+ E  S ^MIO("EFUZY","job",JOBID,"status")=ST
  S ^MIO("EFUZY","job",JOBID,"workflowType")=$G(@JOBROOT@("meta","workflow"))
- S ^MIO("EFUZY","job",JOBID,"status")=$G(@JOBROOT@("meta","status"))
  S ^MIO("EFUZY","job",JOBID,"inputPath")=$G(@JOBROOT@("meta","input_path"))
  S ^MIO("EFUZY","job",JOBID,"diagSummary")=$S($G(@JOBROOT@("meta","error_text"))'="":$G(@JOBROOT@("meta","error_text")),1:"")
  S ^MIO("EFUZY","job",JOBID,"warningCount")=+$G(@JOBROOT@("summary","warnings"))
@@ -303,15 +305,34 @@ PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
  S ^MIO("EFUZY","job",JOBID,"stats","claims")=+$G(@JOBROOT@("summary","claims"))
  S ^MIO("EFUZY","job",JOBID,"stats","lines")=+$G(@JOBROOT@("summary","lines"))
  S ^MIO("EFUZY","job",JOBID,"stats","transactions")=+$G(@JOBROOT@("summary","transactions"))
+ S ^MIO("EFUZY","job",JOBID,"stats","segments")=+$G(@JOBROOT@("summary","segments"))
  S ^MIO("EFUZY","job",JOBID,"stats","roundtripOk")=+$G(@JOBROOT@("summary","roundtrip_ok"))
  S ^MIO("EFUZY","job",JOBID,"stats","traceFields")=+$G(@JOBROOT@("summary","trace_fields"))
  S ^MIO("EFUZY","job",JOBID,"stats","traceSegments")=+$G(@JOBROOT@("summary","trace_segments"))
+ S ^MIO("EFUZY","job",JOBID,"stats","claimCount")=+$G(@JOBROOT@("summary","claims"))
+ S ^MIO("EFUZY","job",JOBID,"stats","serviceLineCount")=+$G(@JOBROOT@("summary","lines"))
+ S ^MIO("EFUZY","job",JOBID,"stats","lineCount")=+$G(@JOBROOT@("summary","lines"))
+ S ^MIO("EFUZY","job",JOBID,"stats","segmentCount")=+$G(@JOBROOT@("summary","segments"))
+ S ^MIO("EFUZY","job",JOBID,"startedAt")=$$NOWISO^MIOUTIL()
+ S ^MIO("EFUZY","job",JOBID,"endedAt")=$$NOWISO^MIOUTIL()
+ K ^MIO("EFUZY","job",JOBID,"artifact")
  S N=0
  F  S N=$O(@JOBROOT@("artifact_by_id",N)) Q:'N  D
  . S KEY=$G(@JOBROOT@("artifact_by_id",N)) Q:KEY=""
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"path")=$G(@JOBROOT@("artifact",KEY,"path"))
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"type")=$G(@JOBROOT@("artifact",KEY,"type"))
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"name")=$G(@JOBROOT@("artifact",KEY,"name"))
+ I $D(@JOBROOT@("artifact","canonical_claims","path")) D
+ . S ^MIO("EFUZY","job",JOBID,"outputPath")=$G(@JOBROOT@("artifact","canonical_claims","path"))
+ . S ^MIO("EFUZY","job",JOBID,"outputName")=$G(@JOBROOT@("artifact","canonical_claims","name"))
+ K ^MIO("EFUZY","job",JOBID,"preview")
+ I $D(@JOBROOT@("preview")) M ^MIO("EFUZY","job",JOBID,"preview")=@JOBROOT@("preview")
+ K ^MIO("EFUZY","job",JOBID,"trace")
+ I $D(@JOBROOT@("trace")) M ^MIO("EFUZY","job",JOBID,"trace")=@JOBROOT@("trace")
+ K ^MIO("EFUZY","job",JOBID,"diag","warning"),^MIO("EFUZY","job",JOBID,"diag","error")
+ S DROOT=$NA(@JOBROOT@("wrk","parse","diag"))
+ I $D(@DROOT@("warning")) M ^MIO("EFUZY","job",JOBID,"diag","warning")=@DROOT@("warning")
+ I $D(@DROOT@("error")) M ^MIO("EFUZY","job",JOBID,"diag","error")=@DROOT@("error")
  Q
  ;
 BOOL(VAL,DEF) ; normalize boolean-like option value

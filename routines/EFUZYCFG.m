@@ -47,18 +47,20 @@ NEXTAUTO()
 	Q ID
 	;
 SAVE(CONF,POST,ID,ERR)
+	N OK
 	D SEEDCHK
-	Q $$SAVEONE(.POST,.ID,.ERR)
+	S OK=$$SAVEONE(.POST,.ID,.ERR)
+	Q:$QUIT OK Q
 	;
 SAVEONE(POST,ID,ERR)
 	N MODE
 	K ERR
 	S ID=$G(POST("id"))
 	I ID="" S ID=$$NEXTPROF()
-	I 'ID S ERR("error")="profile_seq_busy" Q 0
+	I 'ID S ERR("error")="profile_seq_busy" Q:$QUIT 0 Q
 	S MODE=$S($G(POST("exportMode"))'="":POST("exportMode"),1:"claim_summary")
 	S ^MIO("EFUZY","cfg","profile",ID,"id")=ID
-	S ^MIO("EFUZY","cfg","profile",ID,"name")=$$REQ($G(POST("name")),"profile_name_required",.ERR) I $D(ERR) Q 0
+	S ^MIO("EFUZY","cfg","profile",ID,"name")=$$REQ($G(POST("name")),"profile_name_required",.ERR) I $D(ERR) Q:$QUIT 0 Q
 	S ^MIO("EFUZY","cfg","profile",ID,"workflowType")=$S($G(POST("workflowType"))'="":POST("workflowType"),1:"837_to_csv")
 	S ^MIO("EFUZY","cfg","profile",ID,"exportMode")=MODE
 	S ^MIO("EFUZY","cfg","profile",ID,"selectedFields")=$S($G(POST("selectedFields"))'="":POST("selectedFields"),1:$$DFLIST^EFU837EXPMP(MODE))
@@ -71,8 +73,7 @@ SAVEONE(POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","profile",ID,"updatedAt")=$$NOWISO^MIOUTIL()
 	I '$D(^MIO("EFUZY","cfg","profile",ID,"createdAt")) S ^MIO("EFUZY","cfg","profile",ID,"createdAt")=^MIO("EFUZY","cfg","profile",ID,"updatedAt")
 	S ^MIO("EFUZY","idx","profile","name",$ZCONVERT(^MIO("EFUZY","cfg","profile",ID,"name"),"L"),ID)=""
-	Q:$Q 1
-	Q
+	Q:$QUIT 1 Q
 	;
 GET(CONF,ID,OUT)
 	D SEEDCHK
@@ -129,15 +130,15 @@ PROFCTX(ID,TCTX,N)
 	;
 DELPROF(CONF,ID,ERR)
 	K ERR
-	I +$G(ID)<1 S ERR("error")="profile_id_required" Q 0
+	I +$G(ID)<1 S ERR("error")="profile_id_required" Q:$QUIT 0 Q
 	K ^MIO("EFUZY","cfg","profile",ID)
-	Q 1
+	Q:$QUIT 1 Q
 	;
 SAVEAUTO(CONF,POST,ID,ERR)
 	K ERR
 	S ID=$G(POST("id"))
 	I ID="" S ID=$$NEXTAUTO()
-	I 'ID S ERR("error")="automation_seq_busy" Q 0
+	I 'ID S ERR("error")="automation_seq_busy" Q:$QUIT 0 Q
 	S ^MIO("EFUZY","cfg","auto",ID,"id")=ID
 	S ^MIO("EFUZY","cfg","auto",ID,"name")=$S($G(POST("name"))'="":POST("name"),1:"Automation "_ID)
 	S ^MIO("EFUZY","cfg","auto",ID,"workflowType")=$S($G(POST("workflowType"))'="":POST("workflowType"),1:"837_to_csv")
@@ -153,7 +154,7 @@ SAVEAUTO(CONF,POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","auto",ID,"namingRule")=$S($G(POST("namingRule"))'="":POST("namingRule"),1:"{{source_base}}-{{timestamp}}.csv")
 	S ^MIO("EFUZY","cfg","auto",ID,"updatedAt")=$$NOWISO^MIOUTIL()
 	I '$D(^MIO("EFUZY","cfg","auto",ID,"createdAt")) S ^MIO("EFUZY","cfg","auto",ID,"createdAt")=^MIO("EFUZY","cfg","auto",ID,"updatedAt")
-	Q 1
+	Q:$QUIT 1 Q
 	;
 LOADAUTOS(CONF,TCTX)
 	N ID,N
@@ -172,9 +173,9 @@ LOADAUTOS(CONF,TCTX)
 	;
 DELAUTO(CONF,ID,ERR)
 	K ERR
-	I +$G(ID)<1 S ERR("error")="automation_id_required" Q 0
+	I +$G(ID)<1 S ERR("error")="automation_id_required" Q:$QUIT 0 Q
 	K ^MIO("EFUZY","cfg","auto",ID)
-	Q 1
+	Q:$QUIT 1 Q
 	;
 FIELDTOKS(KEY,TCTX)
 	N TXT,I,N,P

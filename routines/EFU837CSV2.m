@@ -3,15 +3,15 @@ EFU837CSV ; CSV export builder
  Q
  ;
 MAKE(CONF,JOBID,PROFILEID,OUTPATH,ERR)
- N P,MODE,FIELDS,DELIM,ROWSRC
+ N P,MODE,FIELDS,DELIM,ROWSRC,OLDIO
  K ERR
  I '$$GET^EFUZYCFG(.CONF,$G(PROFILEID),.P) D
  . S P("id")=""
  . S P("name")="Default Claim Summary"
  . S P("exportMode")="claim_summary"
- . S P("selectedFields")=$$DFLIST^EFU837MAP("claim_summary")
+ . S P("selectedFields")=$$DFLIST^EFU837EXPMP("claim_summary")
  . S P("fieldOrder")=P("selectedFields")
- . S P("delimiter")=","
+ . S P("delimiter")="," 
  . S P("header")=1
  . S P("quoteMode")="minimal"
  . S P("rowSource")="claim"
@@ -19,14 +19,16 @@ MAKE(CONF,JOBID,PROFILEID,OUTPATH,ERR)
  S MODE=$G(P("exportMode")) I MODE="" S MODE="claim_summary"
  S FIELDS=$S($G(P("fieldOrder"))'="":P("fieldOrder"),1:$G(P("selectedFields")))
  S DELIM=$S($G(P("delimiter"))'="":P("delimiter"),1:",")
- S ROWSRC=$S($G(P("rowSource"))'="":P("rowSource"),1:$$ROWSRC^EFU837MAP(MODE))
+ S ROWSRC=$S($G(P("rowSource"))'="":P("rowSource"),1:$$ROWSRC^EFU837EXPMP(MODE))
  S OUTPATH=$$OUTFILE(.CONF,JOBID,.P)
+ S OLDIO=$IO
  O OUTPATH:(newversion:stream:nowrap):1 E  S ERR("error")="export_open_failed" Q 0
  U OUTPATH
  I +$G(P("header")) W $$HDR(FIELDS,DELIM),!
  I ROWSRC="line" D WRLINES(JOBID,FIELDS,DELIM)
  E  D WRCLAIMS(JOBID,FIELDS,DELIM)
  C OUTPATH
+ U OLDIO
  S ^MIO("EFUZY","job",JOBID,"profileName")=$G(P("name"))
  S ^MIO("EFUZY","job",JOBID,"exportMode")=MODE
  Q 1
@@ -47,14 +49,17 @@ OUTFILE(CONF,JOBID,P)
  Q BASE_"/"_NAME
  ;
 REPL(S,KEY,VAL)
- Q $$SUB($G(S),KEY,$G(VAL))
+ Q $$SUB($G(S),$G(KEY),$G(VAL))
  ;
 SUB(S,F,R)
- N P
- S P=$F(S,F)
+ N P,START
+ I $G(F)="" Q $G(S)
+ S START=1
+ S P=$F(S,F,START)
  F  Q:'P  D
  . S S=$E(S,1,P-$L(F)-1)_R_$E(S,P,$L(S))
- . S P=$F(S,F)
+ . S START=P-$L(F)+$L(R)
+ . S P=$F(S,F,START)
  Q S
  ;
 HDR(FIELDS,DELIM)
@@ -95,11 +100,11 @@ VAL(SRC,JOBID,IDX,FIELD)
  Q $G(^MIO("EFUZY","job",JOBID,"wrk","claim",CIDX,FIELD))
  ;
 CSV(V)
- N X
- S X=$G(V)
+ N X,Q
+ S X=$G(V),Q=$C(34)
  S X=$TR(X,$C(13,10),"  ")
- I X[","!(X["""")!(X[$C(10))!(X[$C(13)) D
- . S X=$$SUB(X,"""","""""")
- . S X=""""_X_""""
+ I X[","!(X[Q)!(X[$C(10))!(X[$C(13)) D
+ . S X=$$SUB(X,Q,Q_Q)
+ . S X=Q_X_Q
  Q X
  ;

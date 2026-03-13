@@ -12,7 +12,8 @@ NEXTID()
 CREATEQ(CONF,FILEID,WF,RUNMODE,JOBID,ERR)
  K ERR
  S JOBID=$$NEXTID()
- I 'JOBID S ERR("error")="job_seq_busy" Q 0
+ I 'JOBID D  Q:$QUIT 0 Q
+	. S ERR("error")="job_seq_busy"
  S ^MIO("EFUZY","job",JOBID,"id")=JOBID
  S ^MIO("EFUZY","job",JOBID,"fileId")=$G(FILEID)
  S ^MIO("EFUZY","job",JOBID,"workflowType")=$G(WF)
@@ -22,7 +23,7 @@ CREATEQ(CONF,FILEID,WF,RUNMODE,JOBID,ERR)
  S ^MIO("EFUZY","job",JOBID,"errorCount")=0
  S ^MIO("EFUZY","job",JOBID,"createdAt")=$$NOWISO^MIOUTIL()
  S ^MIO("EFUZY","idx","job","status","queued",JOBID)=""
- Q 1
+ Q:$QUIT 1 Q
  ;
 SETST(JOBID,STATUS)
  N OLD
@@ -72,9 +73,10 @@ RETRY(CONF,JOBID,NEWID,ERR)
  N FILEID,WF,PROF
  S FILEID=$G(^MIO("EFUZY","job",JOBID,"fileId"))
  S WF=$G(^MIO("EFUZY","job",JOBID,"workflowType"))
- I FILEID="" S ERR("error")="job_missing_file" Q 0
- I '$$CREATEQ(.CONF,FILEID,WF,"manual",.NEWID,.ERR) Q 0
+ I FILEID="" D  Q:$QUIT 0 Q
+	. S ERR("error")="job_missing_file"
+ I '$$CREATEQ(.CONF,FILEID,WF,"manual",.NEWID,.ERR) Q:$QUIT 0 Q
  S PROF=$G(^MIO("EFUZY","job",JOBID,"profileId"))
  I PROF'="" S ^MIO("EFUZY","job",NEWID,"profileId")=PROF
- Q 1
+ Q:$QUIT 1 Q
  ;

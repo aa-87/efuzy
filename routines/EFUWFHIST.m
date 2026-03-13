@@ -4,8 +4,8 @@ EFUWFHIST ; efuzy job history helpers
  ;
 LOADRECENT(CONF,LIMIT,TCTX)
  N ID,N
- S N=0,ID=0
- F  S ID=$O(^MIO("EFUZY","job",ID),-1) Q:'ID!(N>=+$G(LIMIT))  D JOBCTX(ID,.TCTX,.N)
+ S N=0,ID=""
+ F  S ID=$O(^MIO("EFUZY","job",ID),-1) Q:ID=""!(N>=+$G(LIMIT))  D JOBCTX(ID,.TCTX,.N)
  I 'N S TCTX("recentEmpty")=1
  Q
  ;
