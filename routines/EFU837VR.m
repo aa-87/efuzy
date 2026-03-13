@@ -20,11 +20,13 @@ LENIENT(ROOT,RES) ; lenient mode wrapper
  Q
  ;
 RUN(ROOT,OPT,RES) ; validate one parsed 837 root using EFU837SPEC + EFUX12DIAG
- N MODE,CGRES
+ N MODE,PROF,PSTAT,CGRES
  K RES
  K @ROOT@("vdiag")
  I '$D(@ROOT@("model_version")) D BUILD^EFU837MODEL(ROOT,.RES)
  S MODE=$$MODE(ROOT,.OPT)
+ S PROF=$S($G(OPT("profile"))'="":$G(OPT("profile")),$G(OPT("companion_profile"))'="":$G(OPT("companion_profile")),1:"")
+ I PROF'="" S PSTAT=$$STATUS^EFU837CG(PROF)
  D PASSENV(ROOT,MODE)
  D PASSGUIDE(ROOT,MODE)
  D PASSCLAIM(ROOT,MODE)
@@ -34,9 +36,27 @@ RUN(ROOT,OPT,RES) ; validate one parsed 837 root using EFU837SPEC + EFUX12DIAG
  D PASSCG(ROOT,.OPT,MODE,.CGRES)
  D SUMMARY^EFUX12DIAG(ROOT,.RES)
  S RES("mode")=MODE
- I $G(CGRES("profile"))'="" S RES("profile")=$G(CGRES("profile"))
- I $G(CGRES("profile_status"))'="" S RES("profile_status")=$G(CGRES("profile_status"))
+ I PROF'="" D
+ . S RES("profile")=PROF
+ . I $G(CGRES("profile_status"))'="" S RES("profile_status")=$G(CGRES("profile_status")) Q
+ . I $G(CGRES("status"))'="" S RES("profile_status")=$G(CGRES("status")) Q
+ . S RES("profile_status")=$G(PSTAT)
  Q
+ ;
+PASSCG(ROOT,OPT,MODE,CGRES) ; optional companion-guide overlay
+ K CGRES
+ D APPLY^EFU837CG(ROOT,.OPT,MODE,.CGRES)
+ Q
+ ;
+CGPROF(OPT) ; companion profile helper
+ I $G(OPT("profile"))'="" Q $$UP^EFU837CG($G(OPT("profile")))
+ I $G(OPT("companion_profile"))'="" Q $$UP^EFU837CG($G(OPT("companion_profile")))
+ Q ""
+ ;
+MODE(ROOT,OPT) ; validation mode string helper
+ I +$G(OPT("lenient")) Q "lenient"
+ I +$G(@ROOT@("meta","lenient")) Q "lenient"
+ Q "strict"
  ;
 PASSENV(ROOT,MODE) ; envelope/control validation
  N CTX,TX,G,WANTENV
@@ -142,130 +162,96 @@ PASSDATA(ROOT,MODE) ; basic date/amount sanity
  . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_DATE","Claim date value is not syntactically valid",.CTX)
  . I $G(@ROOT@("model","claim",CID,"claim_amount"))'="",'$$OKAMT($G(@ROOT@("model","claim",CID,"claim_amount"))) D
  . . K CTX S CTX("claim_id")=CID,CTX("loop_id")="2300",CTX("segment_id")="CLM",CTX("raw_value")=$G(@ROOT@("model","claim",CID,"claim_amount"))
- . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_AMOUNT","Claim amount is not numeric",.CTX)
+ . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_AMOUNT","Claim amount is not syntactically valid",.CTX)
  . S LN=0
  . F  S LN=$O(@ROOT@("model","line",CID,LN)) Q:'LN  D
- . . S VAL=$G(@ROOT@("model","line",CID,LN,"date","472"))
- . . I VAL'="",'$$OKDATE(VAL) D
- . . . K CTX S CTX("claim_id")=CID,CTX("line_no")=LN,CTX("loop_id")="2400",CTX("segment_id")="DTP",CTX("qual")="472",CTX("raw_value")=VAL
- . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_DATE","Service line date value is not syntactically valid",.CTX)
- . . I $G(@ROOT@("model","line",CID,LN,"charge_amount"))'="",'$$OKAMT($G(@ROOT@("model","line",CID,LN,"charge_amount"))) D
- . . . K CTX S CTX("claim_id")=CID,CTX("line_no")=LN,CTX("loop_id")="2400",CTX("segment_id")=$G(@ROOT@("model","line",CID,LN,"svc_kind")),CTX("raw_value")=$G(@ROOT@("model","line",CID,LN,"charge_amount"))
- . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_AMOUNT","Service line charge amount is not numeric",.CTX)
+ . . S VAL=$G(@ROOT@("model","line",CID,LN,"charge_amount"))
+ . . I VAL'="",'$$OKAMT(VAL) D
+ . . . K CTX S CTX("claim_id")=CID,CTX("line_no")=LN,CTX("loop_id")="2400",CTX("segment_id")=$G(@ROOT@("model","line",CID,LN,"svc_kind")),CTX("raw_value")=VAL
+ . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_AMOUNT","Service line charge amount is not syntactically valid",.CTX)
+ . . S QL=""
+ . . F  S QL=$O(@ROOT@("model","line",CID,LN,"date",QL)) Q:QL=""  D
+ . . . S VAL=$G(@ROOT@("model","line",CID,LN,"date",QL))
+ . . . I VAL'="",'$$OKDATE(VAL) D
+ . . . . K CTX S CTX("claim_id")=CID,CTX("line_no")=LN,CTX("loop_id")="2400",CTX("segment_id")="DTP",CTX("qual")=QL,CTX("raw_value")=VAL
+ . . . . D ERR^EFUX12DIAG(ROOT,"X12_BAD_DATE","Service line date value is not syntactically valid",.CTX)
  Q
  ;
-PASSPARTY(ROOT,MODE) ; subscriber/patient data presence checks
- N CID,TX,G,SKEY,PKEY,CTX
+PASSPARTY(ROOT,MODE) ; party/provider sanity
+ N TX,CID,SID,PID,BID,CTX,SKEY,PK
+ S TX=0
+ F  S TX=$O(@ROOT@("model","tx",TX)) Q:'TX  D
+ . S BID=$G(@ROOT@("model","tx",TX,"billing_provider_id"))
+ . I BID="" D
+ . . K CTX S CTX("tx_id")=TX,CTX("loop_id")="2010AA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_BILLING_PROVIDER_MISSING","Billing provider could not be resolved for transaction",.CTX)
  S CID=0
  F  S CID=$O(@ROOT@("model","claim",CID)) Q:'CID  D
- . S TX=+$G(@ROOT@("model","claim",CID,"tx_id"))
- . S G=$G(@ROOT@("model","tx",TX,"guide"))
  . S SKEY=$G(@ROOT@("model","claim",CID,"subscriber_id"))
- . I $$DATAREQ^EFU837SPEC(G,"subscriber_id"),SKEY="" D  Q
- . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
- . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_ID","Subscriber loop is missing a stable identifier",.CTX)
- . I SKEY'="",'$D(@ROOT@("model","party",SKEY)) D
- . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
- . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_PARTY","Subscriber party could not be resolved from parsed content",.CTX)
- . I SKEY'="",$$DATAREQ^EFU837SPEC(G,"subscriber_id"),$D(@ROOT@("model","party",SKEY)),$G(@ROOT@("model","party",SKEY,"id_code"))="" D
- . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
- . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_ID","Subscriber NM109 is missing",.CTX)
- . I SKEY'="",$$DATAREQ^EFU837SPEC(G,"subscriber_name"),$D(@ROOT@("model","party",SKEY)),$$BLANKNM(ROOT,SKEY) D
- . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
- . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_NAME","Subscriber name is missing",.CTX)
- . S PKEY=$G(@ROOT@("model","claim",CID,"patient_id"))
- . I $$ISDIST(PKEY) D
- . . I '$D(@ROOT@("model","party",PKEY)) D  Q
- . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
- . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_PARTY","Distinct patient loop could not be resolved from parsed content",.CTX)
- . . I $$DATAREQ^EFU837SPEC(G,"patient_id_if_distinct"),$G(@ROOT@("model","party",PKEY,"id_code"))="" D
- . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
- . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_ID","Distinct patient NM109 is missing",.CTX)
- . . I $$DATAREQ^EFU837SPEC(G,"patient_name_if_distinct"),$$BLANKNM(ROOT,PKEY) D
- . . . K CTX S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("party_id")=PKEY,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
- . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_NAME","Distinct patient name is missing",.CTX)
+ . I SKEY="" D
+ . . K CTX S CTX("claim_id")=CID,CTX("loop_id")="2010BA",CTX("segment_id")="NM1"
+ . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_PARTY","Subscriber party could not be resolved for claim",.CTX)
+ . I SKEY'="" D
+ . . I $G(@ROOT@("model","party",SKEY,"id_code"))="" D
+ . . . K CTX S CTX("claim_id")=CID,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1",CTX("element")="NM109"
+ . . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_ID","Subscriber id is missing for claim",.CTX)
+ . . I $$PNAME(ROOT,SKEY)="" D
+ . . . K CTX S CTX("claim_id")=CID,CTX("party_id")=SKEY,CTX("loop_id")="2010BA",CTX("segment_id")="NM1",CTX("element")="NM103"
+ . . . D EMIT(ROOT,MODE,"X12_SUBSCRIBER_MISSING_NAME","Subscriber name is missing for claim",.CTX)
+ . S PK=$G(@ROOT@("model","claim",CID,"patient_id"))
+ . I PK'="",$E(PK,1,8)="patient:" D
+ . . I '$D(@ROOT@("model","party",PK)) D
+ . . . K CTX S CTX("claim_id")=CID,CTX("party_id")=PK,CTX("loop_id")="2010CA",CTX("segment_id")="NM1"
+ . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_PARTY","Distinct patient party could not be resolved for claim",.CTX)
+ . . E  D
+ . . . I $G(@ROOT@("model","party",PK,"id_code"))="" D
+ . . . . K CTX S CTX("claim_id")=CID,CTX("party_id")=PK,CTX("loop_id")="2010CA",CTX("segment_id")="NM1",CTX("element")="NM109"
+ . . . . D EMIT(ROOT,MODE,"X12_PATIENT_MISSING_ID","Distinct patient id is missing for claim",.CTX)
  Q
  ;
-PASSBAL(ROOT,MODE) ; claim total should match sum of service line charges
- N CID,TX,G,CLA,SUM,LN,LAMT,OK,TOL,CTX
+PASSBAL(ROOT,MODE) ; claim total versus summed service lines
+ N CID,LN,CLMAMT,SUM,CTX,TOL
+ S TOL=+$$BALTOL^EFU837SPEC("")
  S CID=0
  F  S CID=$O(@ROOT@("model","claim",CID)) Q:'CID  D
- . S TX=+$G(@ROOT@("model","claim",CID,"tx_id"))
- . S G=$G(@ROOT@("model","tx",TX,"guide"))
- . I '$$DATAREQ^EFU837SPEC(G,"claim_total_balance") Q
- . S CLA=$$AMTN($G(@ROOT@("model","claim",CID,"claim_amount")))
- . I CLA="" Q
- . I +$O(@ROOT@("model","line",CID,0))=0 Q
- . S SUM=0,OK=1,LN=0
- . F  S LN=$O(@ROOT@("model","line",CID,LN)) Q:'LN  D  Q:'OK
- . . S LAMT=$$AMTN($G(@ROOT@("model","line",CID,LN,"charge_amount")))
- . . I LAMT="" S OK=0 Q
- . . S SUM=SUM+LAMT
- . I 'OK Q
- . S TOL=$$BALTOL^EFU837SPEC(G)
- . I $$ABS(CLA-SUM)>TOL D
- . . K CTX
- . . S CTX("claim_id")=CID,CTX("tx_id")=TX,CTX("loop_id")="2300",CTX("segment_id")="CLM"
- . . S CTX("claim_amount")=$G(@ROOT@("model","claim",CID,"claim_amount"))
- . . S CTX("line_sum")=SUM
- . . S CTX("tolerance")=TOL
- . . D EMIT(ROOT,MODE,"X12_CLAIM_TOTAL_MISMATCH","Claim total does not match sum of service line charges",.CTX)
+ . S CLMAMT=$G(@ROOT@("model","claim",CID,"claim_amount"))
+ . I CLMAMT="" Q
+ . I '$$OKAMT(CLMAMT) Q
+ . S SUM=0,LN=0
+ . F  S LN=$O(@ROOT@("model","line",CID,LN)) Q:'LN  D
+ . . I $$OKAMT($G(@ROOT@("model","line",CID,LN,"charge_amount"))) S SUM=SUM+$G(@ROOT@("model","line",CID,LN,"charge_amount"))
+ . I $$ABS(CLMAMT-SUM)>TOL D
+ . . K CTX S CTX("claim_id")=CID,CTX("claim_amount")=CLMAMT,CTX("line_sum")=SUM,CTX("loop_id")="2300",CTX("segment_id")="CLM"
+ . . D EMIT(ROOT,MODE,"X12_CLAIM_TOTAL_MISMATCH","Claim total does not match summed service line charges",.CTX)
  Q
  ;
-BLANKNM(ROOT,PKEY) ; whether party has no usable name components
- Q $S($G(@ROOT@("model","party",$G(PKEY),"last_name"))'="":0,$G(@ROOT@("model","party",$G(PKEY),"first_name"))'="":0,1:1)
- ;
-ISDIST(PKEY) ; whether model party id is a distinct patient key
- Q $S($E($G(PKEY),1,8)="patient:":1,1:0)
- ;
-AMTN(X) ; numeric amount or empty string if not parseable
- N Y
- S Y=$G(X)
- I Y?1"-".N Q +Y
- I Y?.N Q +Y
- I Y?1"-".N1".".N Q +Y
- I Y?.N1".".N Q +Y
- Q ""
- ;
-ABS(X) ; absolute value
- Q $S(+$G(X)<0:-+$G(X),1:+$G(X))
- ;
-
-PASSCG(ROOT,OPT,MODE,RES) ; optional companion-guide overlay validation
- N CRES
- I $G(OPT("profile"))="",$G(OPT("companion_profile"))="" Q
- D APPLY^EFU837CG(ROOT,.OPT,MODE,.CRES)
- I $G(CRES("profile"))'="" S RES("profile")=$G(CRES("profile"))
- I $G(CRES("profile_status"))'="" S RES("profile_status")=$G(CRES("profile_status"))
- Q
- ;
-EMIT(ROOT,MODE,CODE,MSG,CTX) ; severity by mode for downgradable findings
- I MODE="lenient" D WARN^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX) Q
+EMIT(ROOT,MODE,CODE,MSG,CTX) ; strict->error, lenient->warning helper
+ I $G(MODE)="lenient" D WARN^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX) Q
  D ERR^EFUX12DIAG(ROOT,$G(CODE),$G(MSG),.CTX)
  Q
  ;
-MODE(ROOT,OPT) ; strict or lenient
- I +$G(OPT("strict")) Q "strict"
- I +$G(OPT("lenient")) Q "lenient"
- I +$G(@ROOT@("meta","lenient")) Q "lenient"
- I +$G(@ROOT@("meta","accept_bad_envelope")) Q "lenient"
- Q "strict"
+OKDATE(X) ; simple YYYYMMDD syntax check
+ N Y,M,D
+ S X=+$G(X)
+ I $L(X)'=8 Q 0
+ S Y=$E(X,1,4),M=$E(X,5,6),D=$E(X,7,8)
+ I M<1!(M>12) Q 0
+ I D<1!(D>31) Q 0
+ Q 1
  ;
-OKDATE(X) ; basic X12 date validation: D8 or RD8-style stored value
- N Y
- S Y=$G(X)
- I Y?8N Q 1
- I Y?8N1"-"8N Q 1
- I Y?12N Q 1
- I Y?1.2N1":"1.2N Q 1
+OKAMT(X) ; numeric amount check
+ I $G(X)?1.N Q 1
+ I $G(X)?1"-".N Q 1
+ I $G(X)?1.N1"."1.N Q 1
+ I $G(X)?1"-"1.N1"."1.N Q 1
  Q 0
  ;
-OKAMT(X) ; numeric-ish amount
- N Y
- S Y=$G(X)
- I Y?1"-".N Q 1
- I Y?.N Q 1
- I Y?1"-".N1".".N Q 1
- I Y?.N1".".N Q 1
- Q 0
+ABS(X) Q $S($G(X)<0:-X,1:+$G(X))
+ ;
+PNAME(ROOT,SKEY) ; best-effort party display name
+ N LN,FN
+ S LN=$G(@ROOT@("model","party",SKEY,"last_name"))
+ S FN=$G(@ROOT@("model","party",SKEY,"first_name"))
+ I LN'="",FN'="" Q LN_", "_FN
+ Q LN_FN
  ;
