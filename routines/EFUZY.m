@@ -4,15 +4,16 @@ EFUZY ; efuzy workspace routes/controllers
 	;
 REG(CONF)
 	N META
-	K META S META("authRequired")=1,META("roles")="operator,admin"
+	K META S META("authRequired")=0,META("roles")="operator,admin"
 	D REG1("GET","/efuzy","HOME^EFUZY",.META)
 	D REG1("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
 	D REG1("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
 	D REG1("GET","/efuzy/profiles","PROFILES^EFUZY",.META)
 	D REG1("GET","/efuzy/profiles/:id","PROFILE^EFUZY",.META)
 	D REG1("GET","/efuzy/automation","AUTOMATION^EFUZY",.META)
+	D ADDM^MIOROUTE("GET","/efuzy/jobs","JOBS^EFUZY",.META)
 	D REG1("GET","/efuzy/jobs/:id","JOBPAGE^EFUZY",.META)
-	K META S META("authRequired")=1,META("roles")="operator,admin"
+	K META S META("authRequired")=0,META("roles")="operator,admin"
 	D REG1("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
 	D REG1("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
 	D REG1("GET","/efuzy/api/jobs","APIJOBS^EFUZY",.META)
@@ -69,7 +70,13 @@ JOBPAGE(DEV,CONF,REQ,CTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_job_detail.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
-	;
+JOBS(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
 APIUPLOAD(DEV,CONF,REQ,CTX)
 	N MP,ERR,FILEID,JOBID,OBJ,PROFILEID
 	I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"multipart_parse_failed")) Q

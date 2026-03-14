@@ -1,0 +1,4 @@
+claim_id,line_number,procedure_code,procedure_qualifier,line_charge,units,line_service_date,subscriber_id,patient_last,patient_first
+756048Q,1,85025,HC,13.39,1,19960911,030005074A,DOE,JOHN
+756048Q,2,93005,HC,76.54,3,19960911,030005074A,DOE,JOHN
+

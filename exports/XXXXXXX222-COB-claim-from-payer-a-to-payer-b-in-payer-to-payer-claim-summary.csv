@@ -1,0 +1,5 @@
+subscriber_id,claim_id,line_charge,procedure_qualifier,line_number,patient_first
+22233444,26407789,43,HC,1,
+22233444,26407789,15,HC,2,
+22233444,26407789,21.04,HC,3,
+
