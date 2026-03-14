@@ -15,7 +15,7 @@ MIOHTTPMPU ; Multipart/form-data streaming parser (MAXSTRING-safe)
 	;
 	; ROI features implemented
 	; - Disk spooling for big file parts:
-	;     CONF("server","multipart","spoolDir") default "tmp"
+	;     CONF("server","multipart","spoolDir") default "/tmp"
 	;     CONF("server","multipart","maxMultipartSpoolBytes") default 0 (disabled)
 	; - Zero-copy part references (file parts, request body must be global):
 	;     CONF("server","multipart","zeroCopyFileParts") default 0
@@ -70,7 +70,7 @@ PARSEDEP(CONF,REQ,MP,ERR,DEP) ;
 	;
 	; Spooling options
 	NEW SPOOLMAX SET SPOOLMAX=+$GET(CONF("server","multipart","maxMultipartSpoolBytes"),0) ; 0 disabled
-	NEW SPOOLDIR SET SPOOLDIR=$GET(CONF("server","multipart","spoolDir"),"tmp")
+	NEW SPOOLDIR SET SPOOLDIR=$GET(CONF("server","multipart","spoolDir"),"/tmp")
 	;
 	; Zero-copy (file parts only)
 	NEW ZCFILE SET ZCFILE=+$GET(CONF("server","multipart","zeroCopyFileParts"),0)
@@ -350,7 +350,7 @@ SPOOLCLOSE(MP,IDX) ;
 	;
 SPOOLPATH(MP,IDX,DIR) ;
 	NEW RID SET RID=$GET(MP("id"))
-	NEW D SET D=$GET(DIR) IF D="" SET D="tmp"
+	NEW D SET D=$GET(DIR) IF D="" SET D="/tmp"
 	IF $E(D,$L(D))="/" SET D=$E(D,1,$L(D)-1)
 	QUIT D_"/mio-mpu-"_$J_"-"_RID_"-"_IDX_".part"
 	;

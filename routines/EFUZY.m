@@ -4,28 +4,32 @@ EFUZY ; efuzy workspace routes/controllers
 	;
 REG(CONF)
 	N META
-	K META S META("authRequired")=0,META("roles")="operator,admin"
-	D ADDM^MIOROUTE("GET","/efuzy","HOME^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/profiles","PROFILES^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/profiles/:id","PROFILE^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/automation","AUTOMATION^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/jobs","JOBS^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/jobs/:id","JOBPAGE^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/download/:jobId/:artifactKey","DOWNLOAD^EFUZY",.META)
-	K META S META("authRequired")=0,META("roles")="operator,admin"
-	D ADDM^MIOROUTE("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/api/jobs","APIJOBS^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/api/job/:id","APIJOB^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/api/files","APIFILES^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/api/export/:jobId","APIEXPORT^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/job/retry","APIRETRY^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/profile/save","APIPROFS^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/profile/delete","APIPROFD^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/automation/save","APIAUTOS^EFUZY",.META)
-	D ADDM^MIOROUTE("POST","/efuzy/api/automation/delete","APIAUTOD^EFUZY",.META)
+	K META S META("authRequired")=1,META("roles")="operator,admin"
+	D REG1("GET","/efuzy","HOME^EFUZY",.META)
+	D REG1("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
+	D REG1("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
+	D REG1("GET","/efuzy/profiles","PROFILES^EFUZY",.META)
+	D REG1("GET","/efuzy/profiles/:id","PROFILE^EFUZY",.META)
+	D REG1("GET","/efuzy/automation","AUTOMATION^EFUZY",.META)
+	D REG1("GET","/efuzy/jobs/:id","JOBPAGE^EFUZY",.META)
+	K META S META("authRequired")=1,META("roles")="operator,admin"
+	D REG1("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
+	D REG1("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
+	D REG1("GET","/efuzy/api/jobs","APIJOBS^EFUZY",.META)
+	D REG1("GET","/efuzy/api/job/:id","APIJOB^EFUZY",.META)
+	D REG1("GET","/efuzy/api/files","APIFILES^EFUZY",.META)
+	D REG1("GET","/efuzy/api/export/:jobId","APIEXPORT^EFUZY",.META)
+	D REG1("POST","/efuzy/api/job/retry","APIRETRY^EFUZY",.META)
+	D REG1("POST","/efuzy/api/profile/save","APIPROFS^EFUZY",.META)
+	D REG1("POST","/efuzy/api/profile/delete","APIPROFD^EFUZY",.META)
+	D REG1("POST","/efuzy/api/automation/save","APIAUTOS^EFUZY",.META)
+	D REG1("POST","/efuzy/api/automation/delete","APIAUTOD^EFUZY",.META)
+	Q
+	;
+REG1(METHOD,PATH,TARGET,META)
+	D ADDM^MIOROUTE($G(METHOD),$G(PATH),$G(TARGET),.META)
+	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"authRequired")=+$G(META("authRequired"))
+	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"roles")=$G(META("roles"))
 	Q
 	;
 HOME(DEV,CONF,REQ,CTX) D WORKSPACE(.DEV,.CONF,.REQ,.CTX) Q
@@ -59,26 +63,12 @@ AUTOMATION(DEV,CONF,REQ,CTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_automation.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
-JOBS(DEV,CONF,REQ,CTX)
-	N TCTX,OUT,ERR
-	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
-	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
-	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
-	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
-	Q
 JOBPAGE(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR,ID S ID=$G(REQ("params","id"))
 	D BUILDJOB^EFUZYUI(.CONF,.REQ,.CTX,ID,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_job_detail.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
-	;
-DOWNLOAD(DEV,CONF,REQ,CTX)
-	N JOBID,ARTKEY,ERR
-	S JOBID=$G(REQ("params","jobId"))
-	S ARTKEY=$G(REQ("params","artifactKey"))
-	I '$$SENDART(.DEV,.CONF,JOBID,ARTKEY,.CTX,.ERR) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"artifact_not_found"))
-	Q
 	;
 APIUPLOAD(DEV,CONF,REQ,CTX)
 	N MP,ERR,FILEID,JOBID,OBJ,PROFILEID
@@ -145,16 +135,70 @@ APIAUTOD(DEV,CONF,REQ,CTX)
 	S OBJ("ok")=1 D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 	;
 PARSEFORM(CONF,REQ,OUT)
-	N CT,MP,ERR,K
+	N CT,BODY,MP,ERR,K
+	; Backward-compatible support for both call styles:
+	;   D PARSEFORM^EFUZY(.REQ,.OUT)
+	;   D PARSEFORM^EFUZY(.CONF,.REQ,.OUT)
+	; In the 2-arg style, CONF is actually the request source and REQ is the output target.;
+	I '$D(OUT),$D(CONF("body")) D  Q
+	. K REQ
+	. S CT=$$LC($G(CONF("hdr","content-type")))
+	. S BODY=$G(CONF("body"))
+	. I CT["multipart/form-data" D  Q
+	. . I '$$PARSE^MIOHTTPMPU(.CONF,.CONF,.MP,.ERR) S REQ("raw")=BODY Q
+	. . S K="" F  S K=$O(MP("field",K)) Q:K=""  S REQ(K)=$G(MP("field",K))
+	. . D FREE^MIOHTTPMPU(.MP)
+	. I BODY["=" D URLDEC(BODY,.REQ) I $D(REQ)>0 Q
+	. S REQ("raw")=BODY
 	K OUT
-	S CT=$ZCONVERT($G(REQ("hdr","content-type")),"L")
+	S CT=$$LC($G(REQ("hdr","content-type")))
+	S BODY=$G(REQ("body"))
 	I CT["multipart/form-data" D  Q
-	. I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) S OUT("raw")=$G(REQ("body")) Q
+	. I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) S OUT("raw")=BODY Q
 	. S K="" F  S K=$O(MP("field",K)) Q:K=""  S OUT(K)=$G(MP("field",K))
 	. D FREE^MIOHTTPMPU(.MP)
-	I $T(DECODEFORM^MIOFNC)'="" D DECODEFORM^MIOFNC($G(REQ("body")),.OUT) Q
-	S OUT("raw")=$G(REQ("body"))
+	I BODY["=" D URLDEC(BODY,.OUT) I $D(OUT)>0 Q
+	S OUT("raw")=BODY
 	Q
+	;
+URLDEC(BODY,OUT)
+	N I,PAIR,K,V
+	K OUT
+	F I=1:1:$L($G(BODY),"&") S PAIR=$P($G(BODY),"&",I) D
+	. S K=$$URLU($P(PAIR,"=",1))
+	. S V=$$URLU($P(PAIR,"=",2,999))
+	. I K'="" S OUT(K)=V
+	Q
+	;
+URLU(X)
+	N I,C,RES,HEX
+	S X=$G(X),RES="",I=1
+	F  Q:I>$L(X)  D
+	. S C=$E(X,I)
+	. I C="+" S RES=RES_" ",I=I+1 Q
+	. I C="%",I+2<=$L(X) D  Q
+	. . S HEX=$E(X,I+1,I+2)
+	. . I $$ISHEX(HEX) S RES=RES_$C($$HEXDEC(HEX)),I=I+3 Q
+	. . S RES=RES_C,I=I+1
+	. S RES=RES_C,I=I+1
+	Q RES
+	;
+LC(X)
+	Q $ZCONVERT($G(X),"L")
+	;
+ISHEX(X)
+	N I,C,Q S Q=1
+	I $L($G(X))'=2 Q 0
+	F I=1:1:2 S C=$E(X,I) I "0123456789ABCDEFabcdef"'[C S Q=0 Q
+	Q Q
+	;
+HEXDEC(X)
+	Q ($$HEXVAL($E(X,1))*16)+$$HEXVAL($E(X,2))
+	;
+HEXVAL(C)
+	S C=$ZCONVERT($G(C),"U")
+	I C?1N Q C
+	Q $F("ABCDEF",C)-2+10
 	;
 RESPHTML(DEV,CONF,CTX,OUT)
 	N HEAD S HEAD("Content-Type")="text/html; charset=utf-8"
@@ -163,57 +207,10 @@ RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
 	N OBJ S OBJ("ok")=0,OBJ("error")=$G(ERRTXT)
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX) Q
 	;
-SENDART(DEV,CONF,JOBID,ARTKEY,CTX,ERR)
-	N PATH,NAME,TYPE,HEAD,KEY
-	K ERR
-	S JOBID=+JOBID
-	I 'JOBID S ERR("error")="job_id_required" Q 0
-	S KEY=$$SAFEKEY($G(ARTKEY))
-	I KEY="" S KEY=$$DEFART(JOBID)
-	I KEY'="",$D(^MIO("EFUZY","job",JOBID,"artifact",KEY)) D
-	. S PATH=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"path"))
-	. S TYPE=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"type"))
-	. S NAME=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"name"))
-	E  D
-	. S PATH=$G(^MIO("EFUZY","job",JOBID,"outputPath"))
-	. S NAME=$G(^MIO("EFUZY","job",JOBID,"outputName"))
-	. S TYPE="csv"
-	I PATH="" S ERR("error")="artifact_not_found" Q 0
-	I NAME="" S NAME=$$SAFEKEY($S(KEY'="":KEY,1:"download"))
-	S HEAD("Content-Type")=$$MIME(TYPE,PATH)
-	S HEAD("Content-Disposition")="attachment; filename="""_NAME_""""
-	Q $$SENDFILE^MIOHTTP(.DEV,.CONF,PATH,.HEAD,$G(CTX("request_id")),.CTX,"GET")
-	;
-DEFART(JOBID)
-	I $D(^MIO("EFUZY","job",+JOBID,"artifact","profile_export")) Q "profile_export"
-	I $D(^MIO("EFUZY","job",+JOBID,"artifact","canonical_claims")) Q "canonical_claims"
-	I $D(^MIO("EFUZY","job",+JOBID,"artifact","canonical_lines")) Q "canonical_lines"
-	I $D(^MIO("EFUZY","job",+JOBID,"artifact","rebuilt_x12")) Q "rebuilt_x12"
-	Q ""
-	;
-SAFEKEY(X)
-	N I,C,O
-	S O=""
-	F I=1:1:$L($G(X)) S C=$E(X,I) D
-	. I C?1AN S O=O_C Q
-	. I "-_.,"[C S O=O_C Q
-	Q O
-	;
-MIME(TYPE,PATH)
-	N T
-	S T=$ZCONVERT($G(TYPE),"L")
-	I T="csv" Q "text/csv; charset=utf-8"
-	I T="text" Q "text/plain; charset=utf-8"
-	I T="edi" Q "application/edi-x12"
-	I T="json" Q "application/json"
-	I $E($G(PATH),$L($G(PATH))-3,$L($G(PATH)))=".csv" Q "text/csv; charset=utf-8"
-	I $E($G(PATH),$L($G(PATH))-3,$L($G(PATH)))=".txt" Q "text/plain; charset=utf-8"
-	Q "application/octet-stream"
-	;
 WORKBASE(CONF,JOBID,FILEID,MODE)
 	N ROOT
 	S ROOT=$$ROOT^EFUZYFS(.CONF)
-	Q ROOT_"/tmp/"_$G(MODE)_"-"_$G(JOBID)_"-"_$G(FILEID)
+	Q ROOT_"tmp/"_$G(MODE)_"-"_$G(JOBID)_"-"_$G(FILEID)
 	;
 GetRoutineList(routine,result)
 	N %ZR K result,%ZR
