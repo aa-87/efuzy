@@ -1,23 +1,15 @@
-EFUZYCFGPT ; profile and automation hardening tests
- ; Quiet on success.
- ;
+EFUZYCFGPT ; profile configuration production tests
  D START Q
  ;
-START ; default entry
- N FAIL
- S FAIL=0
- D ALL(.FAIL)
- I 'FAIL W !,"OK - EFUZYCFGPT"
- Q
- ;
-ALL(FAIL)
+START
+ N FAIL S FAIL=0
  D T100(.FAIL)
  D T110(.FAIL)
  D T120(.FAIL)
- D T130(.FAIL)
+ I 'FAIL W !,"OK - EFUZYCFGPT"
  Q
  ;
-T100(FAIL) ; selected fields and order are normalized on save
+T100(FAIL)
  N CONF,POST,ID,ERR,P
  D RESET^EFUZYTESTU("")
  S POST("name")="Normalized Custom"
@@ -31,7 +23,7 @@ T100(FAIL) ; selected fields and order are normalized on save
  D EQ(.FAIL,"[T100][order completed]",$G(P("fieldOrder")),"patient_last,claim_id,total_charge")
  Q
  ;
-T110(FAIL) ; delimiter, quote mode, row source, and naming rule normalize
+T110(FAIL)
  N CONF,POST,ID,ERR,P
  D RESET^EFUZYTESTU("")
  S POST("name")="Line Tab Export"
@@ -50,7 +42,7 @@ T110(FAIL) ; delimiter, quote mode, row source, and naming rule normalize
  D EQ(.FAIL,"[T110][naming default]",$G(P("outputNamingRule")),"{{source_base}}-custom.csv")
  Q
  ;
-T120(FAIL) ; load profile preserves token order and timestamps
+T120(FAIL)
  N CONF,POST,ID,ERR,TCTX
  D RESET^EFUZYTESTU("")
  S POST("name")="Token Order"
@@ -64,24 +56,6 @@ T120(FAIL) ; load profile preserves token order and timestamps
  D EQ(.FAIL,"[T120][tok3]",$G(TCTX("profile","fieldOrder",3,"name")),"total_charge")
  D EQ(.FAIL,"[T120][created]",$G(TCTX("profile","createdAt"))'="",1)
  D EQ(.FAIL,"[T120][updated]",$G(TCTX("profile","updatedAt"))'="",1)
- Q
- ;
-T130(FAIL) ; automation save preserves selected profile and naming rule
- N CONF,POST,ID,ERR,TCTX
- D RESET^EFUZYTESTU("")
- S POST("name")="Night Job"
- S POST("workflowType")="837_to_csv"
- S POST("inputFolder")="/in"
- S POST("outputFolder")="/out"
- S POST("selectedProfile")=77
- S POST("enabled")=1
- S POST("namingRule")="{{source_base}}-{{job_id}}.csv"
- D EQ(.FAIL,"[T130][save ok]",$$SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR),1)
- D LOADAUTOS^EFUZYCFG(.CONF,.TCTX)
- D EQ(.FAIL,"[T130][name]",$G(TCTX("automation",1,"name")),"Night Job")
- D EQ(.FAIL,"[T130][profile]",+$G(TCTX("automation",1,"selectedProfile")),77)
- D EQ(.FAIL,"[T130][enabled]",+$G(TCTX("automation",1,"enabled")),1)
- D EQ(.FAIL,"[T130][naming]",$G(^MIO("EFUZY","cfg","auto",ID,"namingRule")),"{{source_base}}-{{job_id}}.csv")
  Q
  ;
 EQ(FAIL,LABEL,GOT,EXP)

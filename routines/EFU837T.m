@@ -311,7 +311,7 @@ T019(FAIL) ; single-file CSV export writes all expected files
 	N PATH,ROOT,RES,OPT,OUTBASE
 	S PATH=$$WRFILE($$SAMPLEI())
 	S ROOT=$NA(^TMP($J,"EFU837T",19))
-	S OUTBASE="/tmp/efu837t-exp-"_$J_"-19"
+	S OUTBASE="tmp/efu837t-exp-"_$J_"-19"
 	D EXPORT^EFU837CSV(PATH,OUTBASE,ROOT,.OPT,.RES)
 	D EQ(.FAIL,"[T019][ok]",+$G(RES("ok")),1)
 	D EQ(.FAIL,"[T019][combined rows]",+$G(RES("combined_rows")),2)
@@ -790,7 +790,7 @@ CSVROWS(PATH) ; count CSV data rows, excluding header and blank lines
 	;
 WRFILE(DATA) ; write temp file and return path
 	N PATH,DEV,OLDIO
-	S PATH="/tmp/efu837t-"_$J_"-"_$R(999999)_".edi"
+	S PATH="tmp/efu837t-"_$J_"-"_$R(999999)_".edi"
 	S DEV=PATH,OLDIO=$IO
 	O DEV:(NEWVERSION:STREAM):1
 	I '$T Q ""

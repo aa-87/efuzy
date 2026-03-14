@@ -10,120 +10,110 @@
       darkMode: ['class', '[data-theme="dark"]'],
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
-          }
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui','sans-serif'] }
         }
       }
     };
   </script>
   <style>
     :root {
-      --bg: #f5f7fb;
-      --bg-alt: #ffffff;
-      --panel: rgba(255,255,255,.88);
-      --panel-2: #ffffff;
-      --border: rgba(15,23,42,.10);
-      --text: #0f172a;
-      --muted: #475569;
-      --sidebar: #e9eef8;
-      --shadow: 0 10px 30px rgba(15,23,42,.08);
+      --bg:#f4f7fb;
+      --bg-soft:#ffffff;
+      --panel:rgba(255,255,255,.9);
+      --panel-soft:#ffffff;
+      --border:rgba(15,23,42,.10);
+      --text:#0f172a;
+      --muted:#475569;
+      --sidebar:#ecf2fb;
+      --shadow:0 14px 40px rgba(15,23,42,.08);
     }
     html[data-theme="dark"] {
-      --bg: #07111f;
-      --bg-alt: #0c1728;
-      --panel: rgba(8,16,30,.88);
-      --panel-2: rgba(12,23,40,.96);
-      --border: rgba(148,163,184,.16);
-      --text: #dbe7f5;
-      --muted: #94a3b8;
-      --sidebar: #081222;
-      --shadow: 0 14px 36px rgba(2,6,23,.35);
+      --bg:#08111e;
+      --bg-soft:#0d1728;
+      --panel:rgba(8,16,30,.9);
+      --panel-soft:rgba(11,21,37,.98);
+      --border:rgba(148,163,184,.16);
+      --text:#dbe7f5;
+      --muted:#94a3b8;
+      --sidebar:#091321;
+      --shadow:0 18px 44px rgba(2,6,23,.34);
     }
     body {
       background:
-        radial-gradient(circle at top left, rgba(14,165,233,.08), transparent 28%),
-        radial-gradient(circle at top right, rgba(99,102,241,.07), transparent 24%),
+        radial-gradient(circle at top left, rgba(14,165,233,.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(99,102,241,.06), transparent 22%),
         var(--bg);
-      color: var(--text);
+      color:var(--text);
     }
-    .app-shell { min-height: 100vh; }
+    .app-shell { min-height:100vh; }
     .app-sidebar {
-      background: linear-gradient(180deg, rgba(8,16,30,.96), rgba(8,16,30,.88));
-      border-right: 1px solid var(--border);
+      background:linear-gradient(180deg, rgba(7,17,31,.98), rgba(9,19,33,.92));
+      border-right:1px solid var(--border);
     }
     html[data-theme="light"] .app-sidebar {
-      background: linear-gradient(180deg, rgba(233,238,248,.98), rgba(244,247,252,.95));
+      background:linear-gradient(180deg, rgba(236,242,251,.98), rgba(244,247,251,.95));
     }
     .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
+      background:var(--panel);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(16px);
     }
-    .panel-soft {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-    }
-    .muted { color: var(--muted); }
-    .section-kicker {
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      font-size: .68rem;
-      color: #7dd3fc;
-    }
-    html[data-theme="light"] .section-kicker { color: #0284c7; }
-    .grid-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
-    .grid-table tbody td { white-space: nowrap; }
-    .data-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
-    .data-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,.25); border-radius: 999px; }
+    .panel-soft { background:var(--panel-soft); border:1px solid var(--border); }
+    .muted { color:var(--muted); }
+    .section-kicker { letter-spacing:.16em; text-transform:uppercase; font-size:.68rem; color:#38bdf8; font-weight:700; }
+    html[data-theme="light"] .section-kicker { color:#0284c7; }
+    .grid-table thead th { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700; }
+    .grid-table tbody td { white-space:nowrap; }
+    .data-scroll::-webkit-scrollbar { width:10px; height:10px; }
+    .data-scroll::-webkit-scrollbar-thumb { background:rgba(148,163,184,.26); border-radius:999px; }
     .badge {
-      display: inline-flex; align-items: center; gap: .4rem;
-      border-radius: 999px; padding: .35rem .7rem; font-size: .72rem; font-weight: 600;
-      border: 1px solid transparent;
+      display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .72rem; border-radius:999px;
+      font-size:.72rem; font-weight:700; border:1px solid transparent; line-height:1;
     }
-    .badge::before { content: ''; width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; opacity: .9; }
-    .badge-slate { color: #94a3b8; background: rgba(148,163,184,.10); border-color: rgba(148,163,184,.16); }
-    .badge-sky { color: #7dd3fc; background: rgba(14,165,233,.12); border-color: rgba(14,165,233,.18); }
-    .badge-emerald { color: #6ee7b7; background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.18); }
-    .badge-amber { color: #fbbf24; background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.20); }
-    .badge-rose { color: #fb7185; background: rgba(244,63,94,.12); border-color: rgba(244,63,94,.20); }
-    .badge-violet { color: #c4b5fd; background: rgba(139,92,246,.12); border-color: rgba(139,92,246,.20); }
-    .tone-slate { background: linear-gradient(180deg, rgba(148,163,184,.10), rgba(148,163,184,.05)); border-color: rgba(148,163,184,.14); }
-    .tone-sky { background: linear-gradient(180deg, rgba(14,165,233,.12), rgba(14,165,233,.05)); border-color: rgba(14,165,233,.18); }
-    .tone-emerald { background: linear-gradient(180deg, rgba(16,185,129,.14), rgba(16,185,129,.05)); border-color: rgba(16,185,129,.18); }
-    .tone-amber { background: linear-gradient(180deg, rgba(245,158,11,.14), rgba(245,158,11,.05)); border-color: rgba(245,158,11,.18); }
-    .tone-rose { background: linear-gradient(180deg, rgba(244,63,94,.14), rgba(244,63,94,.05)); border-color: rgba(244,63,94,.18); }
-    .tone-violet { background: linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.05)); border-color: rgba(139,92,246,.18); }
+    .badge::before { content:''; width:.45rem; height:.45rem; border-radius:999px; background:currentColor; opacity:.95; }
+    .badge-slate{color:#94a3b8;background:rgba(148,163,184,.1);border-color:rgba(148,163,184,.16)}
+    .badge-sky{color:#7dd3fc;background:rgba(14,165,233,.12);border-color:rgba(14,165,233,.18)}
+    .badge-emerald{color:#6ee7b7;background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.18)}
+    .badge-amber{color:#fbbf24;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.2)}
+    .badge-rose{color:#fb7185;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.2)}
+    .badge-violet{color:#c4b5fd;background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.2)}
+    .tone-slate{background:linear-gradient(180deg, rgba(148,163,184,.10), rgba(148,163,184,.05)); border-color:rgba(148,163,184,.14)}
+    .tone-sky{background:linear-gradient(180deg, rgba(14,165,233,.12), rgba(14,165,233,.05)); border-color:rgba(14,165,233,.18)}
+    .tone-emerald{background:linear-gradient(180deg, rgba(16,185,129,.14), rgba(16,185,129,.05)); border-color:rgba(16,185,129,.18)}
+    .tone-amber{background:linear-gradient(180deg, rgba(245,158,11,.14), rgba(245,158,11,.05)); border-color:rgba(245,158,11,.18)}
+    .tone-rose{background:linear-gradient(180deg, rgba(244,63,94,.14), rgba(244,63,94,.05)); border-color:rgba(244,63,94,.18)}
+    .tone-violet{background:linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.05)); border-color:rgba(139,92,246,.18)}
     .nav-link {
-      display: block; border-radius: 1rem; border: 1px solid transparent; padding: .85rem .9rem;
-      color: var(--muted); transition: all .16s ease;
+      display:block; border-radius:1rem; border:1px solid transparent; padding:.9rem 1rem; color:var(--muted);
+      transition:all .16s ease;
     }
-    .nav-link:hover { background: rgba(148,163,184,.08); color: var(--text); }
-    .nav-link.active { background: rgba(14,165,233,.10); color: #7dd3fc; border-color: rgba(14,165,233,.18); }
-    html[data-theme="light"] .nav-link.active { color: #0369a1; }
-    .quick-button {
-      border-radius: .9rem; border: 1px solid var(--border); padding: .65rem .95rem; font-size: .82rem;
-      background: rgba(148,163,184,.06);
+    .nav-link:hover { background:rgba(148,163,184,.08); color:var(--text); }
+    .nav-link.active { background:rgba(14,165,233,.10); color:#7dd3fc; border-color:rgba(14,165,233,.18); }
+    html[data-theme="light"] .nav-link.active { color:#075985; }
+    .quick-button, .ghost-button {
+      border-radius:.9rem; border:1px solid var(--border); padding:.68rem .95rem; font-size:.82rem; font-weight:600;
+      background:rgba(148,163,184,.06);
     }
-    .quick-button:hover { background: rgba(148,163,184,.11); }
+    .quick-button:hover, .ghost-button:hover { background:rgba(148,163,184,.11); }
     .primary-button {
-      border-radius: .95rem; padding: .75rem 1rem; font-size: .84rem; font-weight: 700;
-      color: #03131f; background: linear-gradient(180deg, #67e8f9, #38bdf8); border: 1px solid rgba(56,189,248,.3);
+      border-radius:.95rem; padding:.76rem 1rem; font-size:.84rem; font-weight:700; color:#03131f;
+      background:linear-gradient(180deg, #67e8f9, #38bdf8); border:1px solid rgba(56,189,248,.30);
     }
-    .primary-button:hover { filter: brightness(1.03); }
-    .field, .select, .textarea {
-      width: 100%; border-radius: .95rem; border: 1px solid var(--border);
-      background: rgba(2,6,23,.16); color: var(--text); padding: .78rem .9rem; font-size: .87rem;
+    .primary-button:hover { filter:brightness(1.03); }
+    .field,.select,.textarea {
+      width:100%; border-radius:.95rem; border:1px solid var(--border); background:rgba(2,6,23,.16);
+      color:var(--text); padding:.8rem .92rem; font-size:.87rem;
     }
-    html[data-theme="light"] .field, html[data-theme="light"] .select, html[data-theme="light"] .textarea {
-      background: rgba(255,255,255,.75);
-    }
-    .field::placeholder, .textarea::placeholder { color: var(--muted); }
-    .table-row:hover { background: rgba(148,163,184,.06); }
-    .dropzone.is-dragover { border-color: rgba(56,189,248,.45); background: rgba(14,165,233,.08); }
-    details > summary { list-style: none; cursor: pointer; }
-    details > summary::-webkit-details-marker { display: none; }
+    html[data-theme="light"] .field, html[data-theme="light"] .select, html[data-theme="light"] .textarea { background:rgba(255,255,255,.78); }
+    .field::placeholder,.textarea::placeholder { color:var(--muted); }
+    .table-row:hover { background:rgba(148,163,184,.06); }
+    .dropzone.is-dragover { border-color:rgba(56,189,248,.5); background:rgba(14,165,233,.08); }
+    details > summary { list-style:none; cursor:pointer; }
+    details > summary::-webkit-details-marker { display:none; }
+    .stat-label { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--muted); }
+    .key-val dt { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .key-val dd { margin-top:.15rem; font-weight:600; }
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -141,14 +131,14 @@
       <nav class="mt-4 space-y-2">
         {{#nav}}
         <a href="{{href}}" class="nav-link {{#isActive}}active{{/isActive}}">
-          <div class="text-sm font-medium">{{label}}</div>
+          <div class="text-sm font-semibold">{{label}}</div>
           <div class="mt-1 text-xs muted">{{hint}}</div>
         </a>
         {{/nav}}
       </nav>
       <div class="panel mt-4 rounded-[1.25rem] p-4 text-sm">
-        <div class="font-semibold">Operational notes</div>
-        <div class="mt-2 muted">Upload first, preview before publish, then keep canonical claims, lines, manifest, and optional rebuilt X12 under one job.</div>
+        <div class="font-semibold">Current scope</div>
+        <div class="mt-2 muted">Preview first. Publish only after claims, diagnostics, and output choices look right.</div>
       </div>
     </aside>
     <main class="px-4 py-4 lg:px-6 lg:py-6">
@@ -163,43 +153,40 @@
             <a href="/efuzy/workspace" class="quick-button">Workspace</a>
             <a href="/efuzy/jobs" class="quick-button">Jobs</a>
             <a href="/efuzy/profiles" class="quick-button">Profiles</a>
+            <a href="/efuzy/automation" class="quick-button">Automation</a>
             <button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
           </div>
         </div>
       </header>
-      <div class="mt-6">
-        {{{content}}}
-      </div>
+      <div class="mt-6">{{{content}}}</div>
     </main>
   </div>
   <script>
     (function () {
       var root = document.documentElement;
       var key = 'efuzy-theme';
-      function setTheme(mode) {
-        root.setAttribute('data-theme', mode);
-        try { localStorage.setItem(key, mode); } catch (e) {}
-      }
+      function setTheme(mode) { root.setAttribute('data-theme', mode); try { localStorage.setItem(key, mode); } catch (e) {} }
       var saved = null;
       try { saved = localStorage.getItem(key); } catch (e) {}
-      if (!saved) {
-        saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-      }
+      if (!saved) saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       setTheme(saved);
       var btn = document.getElementById('themeToggle');
-      if (btn) {
-        btn.addEventListener('click', function () {
-          setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-        });
-      }
+      if (btn) btn.addEventListener('click', function () { setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
 
-      var apiForms = document.querySelectorAll('[data-api-form]');
-      apiForms.forEach(function (form) {
+      document.querySelectorAll('[data-dropzone]').forEach(function (zone) {
+        var input = zone.querySelector('input[type="file"]'); if (!input) return;
+        ['dragenter','dragover'].forEach(function (evt) { zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.add('is-dragover'); }); });
+        ['dragleave','dragend','drop'].forEach(function (evt) { zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.remove('is-dragover'); }); });
+        zone.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) input.files = e.dataTransfer.files; });
+        zone.addEventListener('click', function (e) { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') input.click(); });
+      });
+
+      document.querySelectorAll('[data-api-form]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
           e.preventDefault();
           var body = new FormData(form);
           fetch(form.action, { method: form.method || 'POST', body: body, headers: { 'Accept': 'application/json' } })
-            .then(function (res) { return res.json().catch(function(){ return { ok:false, error:'invalid_json' }; }); })
+            .then(function (res) { return res.json().catch(function () { return { ok:false, error:'invalid_json' }; }); })
             .then(function (data) {
               if (data && data.ok && data.redirect) { window.location.href = data.redirect; return; }
               if (data && data.ok) { window.location.reload(); return; }
@@ -208,119 +195,155 @@
             .catch(function () { alert('Request failed'); });
         });
       });
-      var editors = document.querySelectorAll('[data-profile-editor]');
-      editors.forEach(function (editor) {
+
+      document.querySelectorAll('[data-profile-editor]').forEach(function (editor) {
         var selectedInput = editor.querySelector('input[name="selectedFields"]');
         var orderInput = editor.querySelector('input[name="fieldOrder"]');
-        var namingInput = editor.querySelector('input[name="outputNamingRule"]');
-        var preview = editor.querySelector('[data-naming-preview]');
+        var naming = editor.querySelector('input[name="outputNamingRule"]');
+        var namingPreview = editor.querySelector('[data-naming-preview]');
+        var fieldCards = Array.prototype.slice.call(editor.querySelectorAll('[data-field-card]'));
+        var selectedWrap = editor.querySelector('[data-selected-columns]');
         var sourceBase = editor.getAttribute('data-source-base') || 'sample-837';
-        var selectedList = editor.querySelector('[data-selected-columns]');
-        function tokens(str) {
-          return (str || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-        }
-        function renderSelected() {
-          var current = tokens(orderInput.value).filter(function (name) {
-            return tokens(selectedInput.value).indexOf(name) >= 0;
-          });
-          orderInput.value = current.join(',');
-          if (!selectedList) return;
-          selectedList.innerHTML = '';
-          current.forEach(function (name, idx) {
-            var row = document.createElement('div');
-            row.className = 'flex items-center justify-between gap-3 rounded-2xl border border-slate-500/10 px-3 py-2';
-            row.innerHTML = '<div><div class="font-medium text-sm">' + name + '</div><div class="text-xs muted">Column #' + (idx + 1) + '</div></div>' +
-              '<div class="flex gap-2">' +
-              '<button type="button" class="quick-button" data-move="up" data-name="' + name + '">↑</button>' +
-              '<button type="button" class="quick-button" data-move="down" data-name="' + name + '">↓</button>' +
-              '<button type="button" class="quick-button" data-remove="1" data-name="' + name + '">Remove</button>' +
-              '</div>';
-            selectedList.appendChild(row);
-          });
-          editor.querySelectorAll('[data-field-check]').forEach(function (box) {
-            var pos = current.indexOf(box.value);
-            var card = box.closest('[data-field-card]');
-            var badge = card ? card.querySelector('[data-order-text]') : null;
-            if (badge) badge.textContent = pos >= 0 ? ('#' + (pos + 1)) : 'Not selected';
-          });
-        }
-        function syncSelectionFromChecks() {
-          var picks = [];
-          editor.querySelectorAll('[data-field-check]:checked').forEach(function (box) { picks.push(box.value); });
-          selectedInput.value = picks.join(',');
-          var order = tokens(orderInput.value).filter(function (name) { return picks.indexOf(name) >= 0; });
-          picks.forEach(function (name) { if (order.indexOf(name) < 0) order.push(name); });
-          orderInput.value = order.join(',');
-          renderSelected();
-        }
-        editor.querySelectorAll('[data-field-check]').forEach(function (box) {
-          box.addEventListener('change', syncSelectionFromChecks);
-        });
-        editor.addEventListener('click', function (e) {
-          var btn = e.target.closest('[data-move],[data-remove],[data-select-all],[data-clear-all]');
-          if (!btn) return;
-          if (btn.hasAttribute('data-select-all')) {
-            editor.querySelectorAll('[data-field-check]').forEach(function (box) { box.checked = true; });
-            syncSelectionFromChecks();
-            return;
-          }
-          if (btn.hasAttribute('data-clear-all')) {
-            editor.querySelectorAll('[data-field-check]').forEach(function (box) { box.checked = false; });
-            syncSelectionFromChecks();
-            return;
-          }
-          var order = tokens(orderInput.value), name = btn.getAttribute('data-name'), i = order.indexOf(name);
-          if (btn.hasAttribute('data-remove')) {
-            editor.querySelectorAll('[data-field-check]').forEach(function (box) { if (box.value === name) box.checked = false; });
-            syncSelectionFromChecks();
-            return;
-          }
-          if (i < 0) return;
-          if (btn.getAttribute('data-move') === 'up' && i > 0) {
-            var tmp = order[i - 1]; order[i - 1] = order[i]; order[i] = tmp;
-          }
-          if (btn.getAttribute('data-move') === 'down' && i < order.length - 1) {
-            var tmp2 = order[i + 1]; order[i + 1] = order[i]; order[i] = tmp2;
-          }
-          orderInput.value = order.join(',');
-          renderSelected();
-        });
-        function updateNamePreview() {
-          if (!preview || !namingInput) return;
-          var txt = namingInput.value || '{{source_base}}-claim-summary.csv';
-          txt = txt.replace(/\{\{/g, '').replace(/\}\}/g, '');
-          txt = txt.replace(/source_base/g, sourceBase).replace(/mode/g, 'preview').replace(/job_id/g, 'preview').replace(/timestamp/g, 'preview');
-          preview.textContent = txt;
-        }
-        if (namingInput) namingInput.addEventListener('input', updateNamePreview);
-        updateNamePreview();
-        renderSelected();
-      });
+        var modeSource = editor.querySelector('select[name="exportMode"], input[name="exportMode"]');
+        var searchBox = editor.querySelector('[data-field-search]');
 
-      var dropzones = document.querySelectorAll('[data-dropzone]');
-      dropzones.forEach(function (zone) {
-        var input = zone.querySelector('input[type="file"]');
-        if (!input) return;
-        ['dragenter', 'dragover'].forEach(function (evt) {
-          zone.addEventListener(evt, function (e) {
-            e.preventDefault();
-            zone.classList.add('is-dragover');
+        function checkedNames() {
+          return fieldCards.filter(function (card) {
+            var cb = card.querySelector('[data-field-check]');
+            return cb && cb.checked;
+          }).map(function (card) {
+            return card.querySelector('[data-field-check]').value;
           });
-        });
-        ['dragleave', 'dragend', 'drop'].forEach(function (evt) {
-          zone.addEventListener(evt, function (e) {
-            e.preventDefault();
-            zone.classList.remove('is-dragover');
+        }
+
+        function labelsByName() {
+          var map = {};
+          fieldCards.forEach(function (card) {
+            var cb = card.querySelector('[data-field-check]');
+            if (!cb) return;
+            var label = card.querySelector('[data-field-label]') || card.querySelector('.font-medium');
+            map[cb.value] = label ? label.textContent.trim() : cb.value;
           });
+          return map;
+        }
+
+        function orderNames() {
+          var names = [];
+          if (!selectedWrap) return names;
+          selectedWrap.querySelectorAll('[data-selected-row]').forEach(function (row) {
+            var nm = row.getAttribute('data-name');
+            if (nm) names.push(nm);
+          });
+          return names;
+        }
+
+        function syncInputs(ordered) {
+          var selected = checkedNames();
+          var finalOrder = (ordered || orderNames()).filter(function (name) { return selected.indexOf(name) >= 0; });
+          selected.forEach(function (name) {
+            if (finalOrder.indexOf(name) < 0) finalOrder.push(name);
+          });
+          if (selectedInput) selectedInput.value = selected.join(',');
+          if (orderInput) orderInput.value = finalOrder.join(',');
+          fieldCards.forEach(function (card) {
+            var cb = card.querySelector('[data-field-check]');
+            var ord = card.querySelector('[data-order-text]');
+            if (!cb || !ord) return;
+            var idx = finalOrder.indexOf(cb.value);
+            ord.textContent = idx >= 0 ? ('#' + (idx + 1)) : '—';
+          });
+          return finalOrder;
+        }
+
+        function renderSelected(seedOrder) {
+          if (!selectedWrap) return;
+          var selected = checkedNames();
+          var ordered = Array.isArray(seedOrder) ? seedOrder.slice() : orderNames();
+          ordered = ordered.filter(function (name) { return selected.indexOf(name) >= 0; });
+          selected.forEach(function (name) { if (ordered.indexOf(name) < 0) ordered.push(name); });
+          var labelMap = labelsByName();
+          selectedWrap.innerHTML = '';
+          if (!ordered.length) {
+            selectedWrap.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-500/20 px-4 py-6 text-sm muted">No columns selected.</div>';
+            syncInputs([]);
+            return;
+          }
+          ordered.forEach(function (name, idx) {
+            var row = document.createElement('div');
+            row.className = 'flex items-center justify-between gap-3 rounded-2xl border border-slate-500/10 px-3 py-3 panel-soft';
+            row.setAttribute('data-selected-row', '1');
+            row.setAttribute('data-name', name);
+            row.innerHTML = '<div class="min-w-0"><div class="font-medium text-sm">' + (labelMap[name] || name) + '</div><div class="text-xs muted">' + name + ' · Position ' + (idx + 1) + '</div></div><div class="flex gap-2"><button type="button" class="quick-button" data-move="up" data-colname="' + name + '">Up</button><button type="button" class="quick-button" data-move="down" data-colname="' + name + '">Down</button><button type="button" class="quick-button" data-remove="1" data-colname="' + name + '">Remove</button></div>';
+            selectedWrap.appendChild(row);
+          });
+          syncInputs(ordered);
+        }
+
+        function updateNamingPreview() {
+          if (!naming || !namingPreview) return;
+          var tokenBase = '{' + '{source_base}}';
+          var tokenTs = '{' + '{timestamp}}';
+          var tokenJob = '{' + '{job_id}}';
+          var tokenMode = '{' + '{mode}}';
+          var modeVal = modeSource ? (modeSource.value || 'claim_summary') : 'claim_summary';
+          var txt = naming.value || (tokenBase + '.csv');
+          txt = txt.split(tokenBase).join(sourceBase);
+          txt = txt.split(tokenTs).join('20260314-120000');
+          txt = txt.split(tokenJob).join('preview');
+          txt = txt.split(tokenMode).join(modeVal);
+          namingPreview.textContent = txt;
+        }
+
+        function filterCards() {
+          if (!searchBox) return;
+          var q = (searchBox.value || '').toLowerCase().trim();
+          fieldCards.forEach(function (card) {
+            var txt = card.textContent.toLowerCase();
+            card.style.display = !q || txt.indexOf(q) >= 0 ? '' : 'none';
+          });
+        }
+
+        fieldCards.forEach(function (card) {
+          var cb = card.querySelector('[data-field-check]');
+          if (cb) cb.addEventListener('change', function () { renderSelected(); updateNamingPreview(); });
         });
-        zone.addEventListener('drop', function (e) {
-          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-            input.files = e.dataTransfer.files;
+
+        editor.addEventListener('click', function (e) {
+          var target = e.target;
+          if (target.matches('[data-select-all]')) {
+            fieldCards.forEach(function (card) { var cb = card.querySelector('[data-field-check]'); if (cb) cb.checked = true; });
+            renderSelected();
+          }
+          if (target.matches('[data-clear-all]')) {
+            fieldCards.forEach(function (card) { var cb = card.querySelector('[data-field-check]'); if (cb) cb.checked = false; });
+            renderSelected();
+          }
+          if (target.matches('[data-remove]')) {
+            var removeName = target.getAttribute('data-colname');
+            fieldCards.forEach(function (card) { var cb = card.querySelector('[data-field-check]'); if (cb && cb.value === removeName) cb.checked = false; });
+            renderSelected();
+          }
+          if (target.matches('[data-move]')) {
+            var moveName = target.getAttribute('data-colname');
+            var names = orderNames();
+            var idx = names.indexOf(moveName);
+            if (idx < 0) return;
+            if (target.getAttribute('data-move') === 'up' && idx > 0) {
+              var tmp = names[idx - 1]; names[idx - 1] = names[idx]; names[idx] = tmp;
+            }
+            if (target.getAttribute('data-move') === 'down' && idx < names.length - 1) {
+              var tmp2 = names[idx + 1]; names[idx + 1] = names[idx]; names[idx] = tmp2;
+            }
+            renderSelected(names);
           }
         });
-        zone.addEventListener('click', function (e) {
-          if (e.target.tagName !== 'INPUT') input.click();
-        });
+
+        if (searchBox) searchBox.addEventListener('input', filterCards);
+        if (naming) naming.addEventListener('input', updateNamingPreview);
+        if (modeSource) modeSource.addEventListener('change', updateNamingPreview);
+        filterCards();
+        renderSelected();
+        updateNamingPreview();
       });
     }());
   </script>

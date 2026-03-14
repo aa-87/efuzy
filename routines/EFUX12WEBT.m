@@ -114,5 +114,5 @@ WRFILE(DATA) ; write DATA to temporary file path and return it
  Q PATH
  ;
 TMPBASE(TAG) ; temporary work stem
- Q "/tmp/efux12webt-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
+ Q "tmp/efux12webt-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
  ;

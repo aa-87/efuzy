@@ -45,7 +45,7 @@ PERFLOW
 	;
 PERFSTATICJOIN
 	NEW OK,OUT
-	SET OK=$$SAFEJOIN^MIOSTATIC("/tmp","a/b.txt","index.html",.OUT)
+	SET OK=$$SAFEJOIN^MIOSTATIC("tmp","a/b.txt","index.html",.OUT)
 	QUIT
 	;
 TOK1()
@@ -198,7 +198,7 @@ T011 ; Gate enabled: router dispatch scaling
 T012 ; Correctness: SAFEJOIN rejects traversal
 	IF $TEXT(SAFEJOIN^MIOSTATIC)="" QUIT
 	NEW OK,OUT
-	SET OK=$$SAFEJOIN^MIOSTATIC("/tmp","../x","index.html",.OUT)
+	SET OK=$$SAFEJOIN^MIOSTATIC("tmp","../x","index.html",.OUT)
 	DO EQ^MIOTASSERT(OK,0,"[T012][no traversal]")
 	QUIT
 	;

@@ -89,7 +89,7 @@ HISTORY(WEBROOT,OPT,RES) ; published job history payload from ^MIO("EFUZY","job"
  S WF=$G(OPT("workflow"))
  S ST=$G(OPT("status"))
  S START=+$G(OPT("start_after"))
- S JID=$S(START>0:$O(^MIO("EFUZY","job",START),-1),1:$O(^MIO("EFUZY","job",""),-1))
+ S JID=$S(START>0:START,1:$O(^MIO("EFUZY","job",""),-1))
  S CNT=0,N=0
  F  Q:JID=""!(CNT>=LIM)  D  S JID=$O(^MIO("EFUZY","job",JID),-1)
  . I '$D(^MIO("EFUZY","job",JID)) Q
@@ -199,8 +199,6 @@ BLDPUB(JID,WEBROOT,OPT,RES) ; build response from published ^MIO job record
  S @WEBROOT@("response","summary","lines")=+$G(^MIO("EFUZY","job",JID,"stats","lines"))
  S @WEBROOT@("response","summary","transactions")=+$G(^MIO("EFUZY","job",JID,"stats","transactions"))
  S @WEBROOT@("response","summary","roundtrip_ok")=+$G(^MIO("EFUZY","job",JID,"stats","roundtripOk"))
- S @WEBROOT@("response","summary","trace_fields")=+$G(^MIO("EFUZY","job",JID,"stats","traceFields"))
- S @WEBROOT@("response","summary","trace_segments")=+$G(^MIO("EFUZY","job",JID,"stats","traceSegments"))
  S @WEBROOT@("response","trace","summary","fields")=+$G(^MIO("EFUZY","job",JID,"stats","traceFields"))
  S @WEBROOT@("response","trace","summary","segments")=+$G(^MIO("EFUZY","job",JID,"stats","traceSegments"))
  D ADDPUBART(JID,WEBROOT)
@@ -298,6 +296,6 @@ RQVAL(KEY,REQ) ; best-effort request value extraction helper
 WORKBASE(TAG,CONF,REQ) ; choose workbase for route wrapper use
  N B
  S B=$G(CONF("x12","workbase"))
- I B="" S B="/tmp/efux12web-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
+ I B="" S B="tmp/efux12web-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
  Q B
  ;

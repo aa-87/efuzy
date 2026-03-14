@@ -2,6 +2,7 @@ EFUZYUI ; efuzy page context builders
 	;
 	Q
 	;
+	;
 BUILDWS(CONF,REQ,CTX,TCTX)
 	K TCTX
 	D BASE(.TCTX)
@@ -608,7 +609,7 @@ PREPXP(TCTX)
 	S TCTX("downloadGroup","other","tone")="tone-slate"
 	Q
 	;
-	
+	;	
 MODESEL(TCTX)
 	N I,MODE
 	S MODE=$G(TCTX("profile","exportMode")) I MODE="" S MODE="claim_summary"
@@ -648,6 +649,11 @@ POSTPREV(TCTX)
 	S TCTX("job","traceLabel")=$S(+$G(TCTX("trace","summary","fields"))>0:"Trace ready",1:"Trace sample pending")
 	S TCTX("job","profileLabel")=$S($G(TCTX("selectedProfileAny")):$G(TCTX("selectedProfile","name")),1:"No profile selected")
 	S TCTX("job","profileModeLabel")=$S($G(TCTX("selectedProfileAny")):$G(TCTX("selectedProfile","modeText")),1:"Canonical only")
+	S TCTX("job","outputPath")=$G(^MIO("EFUZY","job",+$G(TCTX("job","id")),"outputPath"),$G(TCTX("job","outputPath")))
+	S TCTX("job","outputName")=$G(^MIO("EFUZY","job",+$G(TCTX("job","id")),"outputName"),$G(TCTX("job","outputName")))
+	S TCTX("job","plannedOutputName")=$G(^MIO("EFUZY","job",+$G(TCTX("job","id")),"plannedOutputName"),$G(TCTX("job","plannedOutputName")))
+	I $G(TCTX("job","outputName"))="",$G(TCTX("job","outputPath"))'="" S TCTX("job","outputName")=$P($G(TCTX("job","outputPath")),"/",$L($G(TCTX("job","outputPath")),"/"))
+	I $G(TCTX("job","outputPath"))'="" S TCTX("job","outputHref")="/efuzy/api/export/"_+$G(TCTX("job","id"))
 	Q
 	;
 POSTDETAIL(TCTX)
@@ -657,7 +663,88 @@ POSTDETAIL(TCTX)
 POSTPROF(TCTX)
 	S TCTX("profile","selectedFieldCount")=$$CSVCT($G(TCTX("profile","selectedFieldsText")))
 	S TCTX("profile","fieldOrderCount")=$$CSVCT($G(TCTX("profile","fieldOrderText")))
+	D BUILDCAT(.TCTX)
 	Q
+	;
+BUILDCAT(TCTX)
+	N MODE,N,NM,LB,POS,IDX,RS
+	S MODE=$G(TCTX("profile","exportMode")) I MODE="" S MODE="claim_summary"
+	S TCTX("profile","namingPreview")=$$PLANNAME("sample-837.edi",$G(TCTX("profile","id"),"new"),$G(TCTX("profile","outputNamingRule")),$G(TCTX("profile","exportMode")))
+	K TCTX("profile","catalog"),TCTX("profile","selectedColumns")
+	S N=0,IDX=0
+	F  S N=$O(TCTX("maps","fields",MODE,N)) Q:'N  D
+	. S NM=$G(TCTX("maps","fields",MODE,N,"name")) Q:NM=""
+	. S LB=$G(TCTX("maps","fields",MODE,N,"label")) I LB="" S LB=$$UP($TR(NM,"_"," "))
+	. S IDX=IDX+1
+	. S TCTX("profile","catalog",IDX,"name")=NM
+	. S TCTX("profile","catalog",IDX,"label")=LB
+	. S RS=$G(TCTX("maps","fields",MODE,N,"rowSource"))
+	. I RS="" S RS=$$ROWSRC2(MODE)
+	. S TCTX("profile","catalog",IDX,"rowSource")=RS
+	. S TCTX("profile","catalog",IDX,"isSelected")=$S($$INCSV($G(TCTX("profile","selectedFieldsText")),NM):"checked",1:"")
+	. S POS=$$CSVPOS($G(TCTX("profile","fieldOrderText")),NM)
+	. S TCTX("profile","catalog",IDX,"orderPos")=POS
+	. S TCTX("profile","catalog",IDX,"orderText")=$S(POS>0:"#"_POS,1:"Not selected")
+	S IDX=0
+	F N=1:1:$L($G(TCTX("profile","fieldOrderText")),",") S NM=$$TRIM^MIOUTIL($P($G(TCTX("profile","fieldOrderText")),",",N)) I NM'="",$$INCSV($G(TCTX("profile","selectedFieldsText")),NM) D
+	. S IDX=IDX+1
+	. S TCTX("profile","selectedColumns",IDX,"name")=NM
+	. S TCTX("profile","selectedColumns",IDX,"label")=$$MAPLBL(.TCTX,MODE,NM)
+	. S TCTX("profile","selectedColumns",IDX,"order")=IDX
+	I IDX>0 S TCTX("profile","selectedColumnsAny")=1
+	Q
+	;
+MAPLBL(TCTX,MODE,NM)
+	N I,LBL
+	S LBL=""
+	S I=0 F  S I=$O(TCTX("maps","fields",MODE,I)) Q:'I  D  Q:LBL'=""
+	. I $G(TCTX("maps","fields",MODE,I,"name"))=$G(NM) S LBL=$G(TCTX("maps","fields",MODE,I,"label"))
+	I LBL'="" Q LBL
+	Q $$UP($TR($G(NM),"_"," "))
+	;
+CSVPOS(TXT,VAL)
+	N I,P,POS
+	S POS=0
+	F I=1:1:$L($G(TXT),",") S P=$$TRIM^MIOUTIL($P($G(TXT),",",I)) I P=$G(VAL) S POS=I Q
+	Q POS
+	;
+INCSV(TXT,VAL)
+	Q $S((","_$G(TXT)_",")[(","_$G(VAL)_","):1,1:0)
+	;
+ROWSRC2(MODE)
+	I $G(MODE)="service_line" Q "line"
+	Q "claim"
+	;
+PLANNAME(SRC,JOBID,RULE,MODE)
+	N NAME,BASE
+	S BASE=$$SAFEBASE($G(SRC))
+	S NAME=$G(RULE)
+	I NAME="" S NAME="{{source_base}}-"_$S($G(MODE)'="":$G(MODE),1:"claim_summary")_".csv"
+	S NAME=$$SUBX(NAME,"{{source_base}}",BASE)
+	S NAME=$$SUBX(NAME,"{{mode}}",$S($G(MODE)'="":$G(MODE),1:"claim_summary"))
+	S NAME=$$SUBX(NAME,"{{job_id}}",$G(JOBID))
+	S NAME=$$SUBX(NAME,"{{timestamp}}","preview")
+	I NAME["{{" S NAME=BASE_"-preview.csv"
+	Q NAME
+	;
+SAFEBASE(NAME)
+	N X
+	S X=$G(NAME)
+	I X["/" S X=$P(X,"/",$L(X,"/"))
+	I X["\\" S X=$P(X,"\\",$L(X,"\\"))
+	I X["." S X=$P(X,".",1,$L(X,".")-1)
+	I X="" S X="sample-837"
+	Q X
+	;
+SUBX(TXT,OLD,NEW)
+	N OUT,POS,START,LEN
+	S OUT="",START=1,LEN=$L($G(OLD))
+	I LEN=0 Q $G(TXT)
+	F  S POS=$F($G(TXT),$G(OLD),START) Q:'POS  D
+	. S OUT=OUT_$E($G(TXT),START,POS-LEN-1)_$G(NEW)
+	. S START=POS
+	S OUT=OUT_$E($G(TXT),START,$L($G(TXT)))
+	Q OUT
 	;
 CSVCT(X)
 	N I,C,P
@@ -679,5 +766,6 @@ UP(X)
 	. I PREV=" " S O=O_$ZCONVERT(C,"U") S PREV=C Q
 	. S O=O_C,PREV=C
 	Q O
+	;
 	;
 	;

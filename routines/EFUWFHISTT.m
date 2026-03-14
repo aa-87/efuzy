@@ -22,7 +22,7 @@ SEED
  S ^MIO("EFUZY","job",2,"workflowType")="837_to_csv"
  S ^MIO("EFUZY","job",2,"createdAt")="2026-03-09T02:00:00Z"
  S ^MIO("EFUZY","job",2,"fileId")=2
- S ^MIO("EFUZY","job",2,"outputPath")="/tmp/out.csv"
+ S ^MIO("EFUZY","job",2,"outputPath")="tmp/out.csv"
  S ^MIO("EFUZY","job",2,"warningCount")=1
  S ^MIO("EFUZY","job",2,"errorCount")=0
  S ^MIO("EFUZY","job",2,"stats","claimCount")=1
@@ -69,6 +69,6 @@ T004 ; getjson missing and success
  D SEED
  D EQ^MIOTASSERT($$GETJSON^EFUWFHIST(.CONF,0,.OBJ),0,"[T004][missing zero id]")
  D OK^MIOTASSERT($$GETJSON^EFUWFHIST(.CONF,2,.OBJ),"[T004][get ok]")
- D EQ^MIOTASSERT($G(OBJ("job","outputPath")),"/tmp/out.csv","[T004][output path]")
+ D EQ^MIOTASSERT($G(OBJ("job","outputPath")),"tmp/out.csv","[T004][output path]")
  Q
  ;

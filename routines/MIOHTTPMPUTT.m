@@ -256,7 +256,7 @@ T010(DBG)
 	KILL CONF,ERR,MP
 	SET CONF("server","limits","maxMultipartPartScalarBytes")=4
 	SET CONF("server","multipart","maxMultipartSpoolBytes")=10
-	SET CONF("server","multipart","spoolDir")="/tmp"
+	SET CONF("server","multipart","spoolDir")="tmp"
 	SET CRLF=$$CRLF(),B="bnd10"
 	SET DATA="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	SET BODY="--"_B_CRLF

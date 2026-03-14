@@ -296,7 +296,7 @@ EQ(FAIL,LAB,GOT,EXP) ;
  Q
  ;
 TMPBASE(STEM) ;
- Q "/tmp/efux12t-"_$J_"-"_$TR($G(STEM)," /()","____")
+ Q "tmp/efux12t-"_$J_"-"_$TR($G(STEM)," /()","____")
  ;
  ; -------- example inventory helpers --------
 COUNTEX1837(BASE) ;

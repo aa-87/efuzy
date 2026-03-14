@@ -35,7 +35,7 @@ T001 ; ETag persisted and stable even if short cache is cleared
 	KILL ^MIO("STATIC","META")
 	KILL ^MIO("STATIC","ETAG")
 	NEW CONF,REQ,CTX,DEV,OUT,ROOT,FN,FS,OP,ET1,ET2,HD,HS
-	SET ROOT="/tmp"
+	SET ROOT="tmp"
 	SET FN="mio_etag_t001_"_$J_"_"_$P($H,",",2)_".txt"
 	SET FS=ROOT_"/"_FN
 	SET OP="tmp/mio_etag_t001_"_$J_".out"
@@ -90,7 +90,7 @@ T002 ; Identity change (mtime updated) invalidates cached ETag even with long TT
 	KILL ^MIO("STATIC","META")
 	KILL ^MIO("STATIC","ETAG")
 	NEW CONF,REQ,CTX,DEV,OUT,ROOT,FN,FS,OP,ET1,ET2,HD,HS
-	SET ROOT="/tmp"
+	SET ROOT="tmp"
 	SET FN="mio_etag_t002_"_$J_"_"_$P($H,",",2)_".txt"
 	SET FS=ROOT_"/"_FN
 	;

@@ -121,7 +121,7 @@ CHKSPOOL(CONF,OBJ,OK)
 	NEW EN SET EN=$$BOOL($GET(CONF("server","health","readyCheckSpoolDir"),0))
 	IF 'EN DO  QUIT
 	. DO SETCHK(.OBJ,"multipart_spool_dir",1,"skipped")
-	NEW DIR SET DIR=$GET(CONF("server","multipart","spoolDir"),"/tmp")
+	NEW DIR SET DIR=$GET(CONF("server","multipart","spoolDir"),"tmp")
 	NEW DOK SET DOK=$$DIREX(DIR)
 	DO SETCHK(.OBJ,"multipart_spool_dir",DOK,$SELECT(DOK:"ok",1:"missing:"_DIR))
 	IF 'DOK SET OK=0

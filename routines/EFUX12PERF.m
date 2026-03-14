@@ -349,7 +349,7 @@ WRDATA(DATA,TAG) ; write temporary input data and return path
  Q PATH
  ;
 TMPBASE(TAG) ; temporary work stem
- Q "/tmp/efux12perf-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
+ Q "tmp/efux12perf-"_$J_"-"_$TR($G(TAG)," /","__")_"-"_$R(999999)
  ;
 HDIFF(A,B) ; elapsed seconds from two $H values
  N AD,AT,BD,BT

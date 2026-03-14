@@ -56,6 +56,7 @@ SAFEFN(FN)
 	S X=$G(FN),O=""
 	F I=1:1:$L(X) S C=$E(X,I) D
 	. I C?1AN S O=O_C Q
+	. I C=" " S O=O_"_" Q
 	. I "-_."[C S O=O_C Q
 	. S O=O_"_"
 	Q O
@@ -63,7 +64,7 @@ SAFEFN(FN)
 LOADFILES(CONF,LIMIT,TCTX)
 	N ID,N
 	S N=0,ID=""
-	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:'ID!(N>=+$G(LIMIT))  D
+	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:ID=""!(N>=+$G(LIMIT))  D
 	. S N=N+1
 	. S TCTX("files",N,"id")=ID
 	. S TCTX("files",N,"name")=$G(^MIO("EFUZY","file",ID,"name"))

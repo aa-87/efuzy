@@ -44,7 +44,7 @@ MKFILES(ROOT,NAME,PLAIN,BR,GZ,MAKEBR,MAKEGZ)
 BASECONF(CONF)
 	KILL CONF
 	SET CONF("server","static","enabled")=1
-	SET CONF("server","static","root")="/tmp"
+	SET CONF("server","static","root")="tmp"
 	SET CONF("server","static","mount")="/static"
 	SET CONF("server","static","precompressed","enabled")=1
 	SET CONF("server","static","precompressed","allowRangeEncoded")=0
@@ -62,7 +62,7 @@ T001 ; br preferred when present
 	NEW CONF,REQ,CTX,DEV,OUT,NAME,FP,OP
 	DO BASECONF(.CONF)
 	SET NAME="miostatic_ztt1_"_$J_"_"_$P($H,",",2)
-	SET FP=$$MKFILES("/tmp",NAME,"plain","brdata","gzdata",1,1)
+	SET FP=$$MKFILES("tmp",NAME,"plain","brdata","gzdata",1,1)
 	SET OP="tmp/mio_static_ztt1_"_$J_".out"
 	KILL REQ,CTX
 	SET REQ("method")="GET"
@@ -82,7 +82,7 @@ T002 ; q=0 disables br, gzip served
 	NEW CONF,REQ,CTX,DEV,OUT,NAME,FP,OP
 	DO BASECONF(.CONF)
 	SET NAME="miostatic_ztt2_"_$J_"_"_$P($H,",",2)
-	SET FP=$$MKFILES("/tmp",NAME,"plain","brdata","gzdata",1,1)
+	SET FP=$$MKFILES("tmp",NAME,"plain","brdata","gzdata",1,1)
 	SET OP="tmp/mio_static_ztt2_"_$J_".out"
 	KILL REQ,CTX
 	SET REQ("method")="GET"
@@ -100,7 +100,7 @@ T003 ; no Accept-Encoding -> original (no Content-Encoding), still Vary present
 	;NEW CONF,REQ,CTX,DEV,OUT,NAME,FP,OP
 	DO BASECONF(.CONF)
 	SET NAME="miostatic_ztt3_"_$J_"_"_$P($H,",",2)
-	SET FP=$$MKFILES("/tmp",NAME,"plain","brdata","gzdata",1,1)
+	SET FP=$$MKFILES("tmp",NAME,"plain","brdata","gzdata",1,1)
 	SET OP="tmp/mio_static_ztt3_"_$J_".out"
 	KILL REQ,CTX
 	SET REQ("method")="GET"
@@ -118,7 +118,7 @@ T004 ; Range request should not serve encoded variant (default)
 	NEW CONF,REQ,CTX,DEV,OUT,NAME,FP,OP
 	DO BASECONF(.CONF)
 	SET NAME="miostatic_ztt4_"_$J_"_"_$P($H,",",2)
-	SET FP=$$MKFILES("/tmp",NAME,"plain","brdata","gzdata",1,1)
+	SET FP=$$MKFILES("tmp",NAME,"plain","brdata","gzdata",1,1)
 	SET OP="tmp/mio_static_ztt4_"_$J_".out"
 	KILL REQ,CTX
 	SET REQ("method")="GET"
@@ -138,7 +138,7 @@ T005 ; br missing -> fallback to gzip when accepted and present
 	DO BASECONF(.CONF)
 	SET NAME="miostatic_ztt5_"_$J_"_"_$P($H,",",2)
 	; create only gzip sidecar
-	SET FP=$$MKFILES("/tmp",NAME,"plain","brdata","gzdata",0,1)
+	SET FP=$$MKFILES("tmp",NAME,"plain","brdata","gzdata",0,1)
 	SET OP="tmp/mio_static_ztt5_"_$J_".out"
 	KILL REQ,CTX
 	SET REQ("method")="GET"
