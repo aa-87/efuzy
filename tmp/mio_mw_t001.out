@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 46
+Content-Type: application/json
+X-Request-Id: 676426372265447614400
+
+{"ok":1,"routine":"MIOMWT","trace":"b1,b2,h,"}

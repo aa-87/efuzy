@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 2
+Content-Type: text/plain
+X-App: mio
+X-Request-Id: rid150
+
+ok

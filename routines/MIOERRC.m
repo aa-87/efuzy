@@ -66,8 +66,8 @@ SHOULD(CONF,CTX,ERR)
 	;
 PUSH(CONF,REQ,CTX,ERR,PHASE)
 	NEW $ETRAP SET $ETRAP="SET $ECODE="""" QUIT:$QUIT 0  QUIT"
-	IF '$$EN(.CONF) QUIT 0
-	IF '$$SHOULD(.CONF,.CTX,.ERR) QUIT 0
+	IF '$$EN(.CONF) QUIT:$QUIT 0 QUIT
+	IF '$$SHOULD(.CONF,.CTX,.ERR) QUIT:$QUIT 0 QUIT
 	NEW MAX SET MAX=$$MAX(.CONF)
 	NEW SEQ SET SEQ=$INCREMENT(^MIO("ERR","seq"))
 	NEW SLOT SET SLOT=((SEQ-1)#MAX)+1
@@ -95,7 +95,6 @@ PUSH(CONF,REQ,CTX,ERR,PHASE)
 	IF ER'="" SET ^MIO("ERR","ring",SLOT,"error")=ER
 	IF ROU'="" SET ^MIO("ERR","ring",SLOT,"routine")=ROU
 	SET ^MIO("ERR","ring",SLOT,"phase")=PH
-	; Light extra context (never store secrets)
 	IF $GET(CTX("met","total_ms"))'="" SET ^MIO("ERR","ring",SLOT,"total_ms")=+CTX("met","total_ms")
 	IF $GET(CTX("bytes_in"))'="" SET ^MIO("ERR","ring",SLOT,"bytes_in")=+CTX("bytes_in")
 	IF $GET(CTX("bytes_out"))'="" SET ^MIO("ERR","ring",SLOT,"bytes_out")=+CTX("bytes_out")

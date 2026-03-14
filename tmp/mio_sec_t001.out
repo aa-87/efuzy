@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 2
+Content-Type: text/plain; charset=utf-8
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: strict-origin-when-cross-origin
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Request-Id: sec001
+
+ok

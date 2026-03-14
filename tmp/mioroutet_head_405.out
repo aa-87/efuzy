@@ -1,0 +1,8 @@
+HTTP/1.1 405 Method Not Allowed
+Allow: GET, POST
+Connection: keep-alive
+Content-Length: 101
+Content-Type: application/json
+X-Request-Id: rid-head-405
+
+

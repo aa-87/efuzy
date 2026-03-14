@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 40
+Content-Type: application/json
+X-Request-Id: 676426374812841414400
+
+{"ok":1,"user":{"id":"u1","name":"Ann"}}

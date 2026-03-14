@@ -1,0 +1,7 @@
+HTTP/1.1 101 Switching Protocols
+Connection: keep-alive
+Content-Length: 0
+Upgrade: websocket
+X-Request-Id: rid415
+
+

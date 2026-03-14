@@ -1,0 +1,78 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Type: text/plain; version=0.0.4
+Transfer-Encoding: chunked
+X-Request-Id: met002
+
+EA7
+# HELP mws_requests_total Total HTTP requests by method, route, status
+# TYPE mws_requests_total counter
+mws_requests_total{method="GET",route="/m",status="200"} 1
+
+# HELP mws_request_duration_ms Request duration histogram (milliseconds)
+# TYPE mws_request_duration_ms histogram
+mws_request_duration_ms_bucket{method="GET",route="/m",le="5"} 0
+mws_request_duration_ms_bucket{method="GET",route="/m",le="10"} 0
+mws_request_duration_ms_bucket{method="GET",route="/m",le="25"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="50"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="100"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="250"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="500"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="1000"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="2500"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="5000"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="10000"} 1
+mws_request_duration_ms_bucket{method="GET",route="/m",le="inf"} 1
+mws_request_duration_ms_sum{method="GET",route="/m"} 15
+mws_request_duration_ms_count{method="GET",route="/m"} 1
+# HELP mws_parse_duration_ms Parse duration histogram (milliseconds)
+# TYPE mws_parse_duration_ms histogram
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="5"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="10"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="25"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="50"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="100"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="250"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="500"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="1000"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="2500"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="5000"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="10000"} 1
+mws_parse_duration_ms_bucket{method="GET",route="/m",le="inf"} 1
+mws_parse_duration_ms_sum{method="GET",route="/m"} 3
+mws_parse_duration_ms_count{method="GET",route="/m"} 1
+# HELP mws_handler_duration_ms Handler duration histogram (milliseconds)
+# TYPE mws_handler_duration_ms histogram
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="5"} 0
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="10"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="25"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="50"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="100"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="250"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="500"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="1000"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="2500"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="5000"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="10000"} 1
+mws_handler_duration_ms_bucket{method="GET",route="/m",le="inf"} 1
+mws_handler_duration_ms_sum{method="GET",route="/m"} 9
+mws_handler_duration_ms_count{method="GET",route="/m"} 1
+
+# HELP mws_request_bytes_in_total Total request bytes in
+# TYPE mws_request_bytes_in_total counter
+mws_request_bytes_in_total{method="GET",route="/m"} 1
+
+# HELP mws_request_bytes_out_total Total response bytes out
+# TYPE mws_request_bytes_out_total counter
+mws_request_bytes_out_total{method="GET",route="/m"} 2
+
+# HELP mws_responses_total Total responses by status bucket
+# TYPE mws_responses_total counter
+mws_responses_total{bucket="2xx"} 1
+
+# HELP mws_errors_total Total errors by error code
+# TYPE mws_errors_total counter
+
+0
+
+

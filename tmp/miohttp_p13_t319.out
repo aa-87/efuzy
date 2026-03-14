@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 2
+Content-Type: text/plain
+X-A: 1
+X-B: 2
+X-Request-Id: rid319
+
+ok

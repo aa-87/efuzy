@@ -1,0 +1,13 @@
+HTTP/1.1 206 Partial Content
+Accept-Ranges: bytes
+Connection: keep-alive
+Content-Length: 2
+Content-Range: bytes 0-1/5
+Content-Type: text/plain; charset=utf-8
+ETag: W/"5-105382421"
+Last-Modified: Thu, 31 Dec 1840 00:00:00 GMT
+Vary: Accept-Encoding
+X-Content-Type-Options: nosniff
+X-Request-Id: ztt004
+
+pl

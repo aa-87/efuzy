@@ -109,7 +109,8 @@
         "/metrics",
         "/bench",
         "/app",
-        "/ws"
+        "/ws",
+        "/efuzy/*"
       ]},
     "protectMode": "route",
     "jwt": {
