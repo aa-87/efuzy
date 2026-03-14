@@ -314,9 +314,9 @@ PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"name")=$G(@JOBROOT@("artifact",KEY,"name"))
  Q
  ;
-NL() ; explicit newline for stream files
-	Q $C(10)
-	;
+NL() ; explicit line terminator for stream writes
+ Q $C(13,10)
+ ;
 BOOL(VAL,DEF) ; normalize boolean-like option value
  I $G(VAL)="" Q +$G(DEF)
  I +$G(VAL)=0 Q 0

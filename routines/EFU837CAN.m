@@ -427,8 +427,8 @@ WRROW(ROW) ; write one CSV row to current device
 	W OUT,$$NL()
 	Q
 	;
-NL() ; explicit newline for stream files
-	Q $C(10)
+NL() ; explicit line terminator for stream writes
+	Q $C(13,10)
 	;
 SCHEMA() Q "EFU837_CANONICAL"
 SCHEMAV() Q 1

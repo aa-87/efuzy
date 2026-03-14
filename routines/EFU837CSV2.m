@@ -1,4 +1,4 @@
-EFU837CSV2 ; CSV export builder
+EFU837CSV ; CSV export builder
  ;
  Q
  ;
