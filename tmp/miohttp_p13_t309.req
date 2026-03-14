@@ -1,5 +1,0 @@
-GET /x HTTP/1.1
-X-Mode: one
-X-Mode: two
-
-

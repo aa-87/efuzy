@@ -1,3 +1,0 @@
-GET /q?a=%2F&b=hello+world HTTP/1.1
-
-

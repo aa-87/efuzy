@@ -1,7 +1,0 @@
-POST /multi HTTP/1.1
-Host: ex
-X-A: 1
-X-B: 2
-Content-Length: 2
-
-ok

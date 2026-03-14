@@ -1,4 +1,0 @@
-POST /z HTTP/1.1
-Content-Length: 2
-
-ok

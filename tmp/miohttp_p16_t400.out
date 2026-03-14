@@ -1,7 +1,0 @@
-HTTP/1.1 200 OK
-Connection: keep-alive
-Content-Length: 33
-Content-Type: application/json
-X-Request-Id: 676426374817981914400
-
-{"body":"ok","path":"\/split400"}

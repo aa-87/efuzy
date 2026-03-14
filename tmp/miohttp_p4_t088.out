@@ -1,7 +1,0 @@
-HTTP/1.1 200 OK
-Connection: keep-alive
-Content-Length: 19
-Content-Type: application/json
-X-Request-Id: 676426374812736314400
-
-{"msg":"hi","ok":1}

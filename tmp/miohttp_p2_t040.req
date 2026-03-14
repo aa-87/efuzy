@@ -1,4 +1,0 @@
-GET /x?a=1 HTTP/1.1
-Host: ex
-
-

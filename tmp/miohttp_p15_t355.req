@@ -1,4 +1,0 @@
-CONNECT ex:443 HTTP/1.1
-X-A: 1
-
-

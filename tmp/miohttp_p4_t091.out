@@ -1,7 +1,0 @@
-HTTP/1.1 599 
-Connection: keep-alive
-Content-Length: 1
-Content-Type: text/plain
-X-Request-Id: rid091
-
-x

@@ -1,5 +1,0 @@
-POST /custom HTTP/1.1
-X-Feature: on
-Content-Length: 2
-
-ok

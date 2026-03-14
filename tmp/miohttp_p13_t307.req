@@ -1,4 +1,0 @@
-GET /plain HTTP/1.1
-Content-Type: text/plain
-
-

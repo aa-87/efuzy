@@ -1,9 +1,0 @@
-HTTP/1.1 206 
-Connection: keep-alive
-Content-Type: text/plain
-Transfer-Encoding: chunked
-X-Request-Id: rid125
-
-0
-
-

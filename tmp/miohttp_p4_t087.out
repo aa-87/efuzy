@@ -1,7 +1,0 @@
-HTTP/1.1 201 
-Connection: keep-alive
-Content-Length: 7
-Content-Type: text/plain
-X-Request-Id: rid087
-
-created

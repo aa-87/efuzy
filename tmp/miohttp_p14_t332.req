@@ -1,5 +1,0 @@
-GET /hdr HTTP/1.1
-Host: ex
-X-T: 9
-
-

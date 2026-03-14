@@ -1,4 +1,0 @@
-POST /big HTTP/1.1
-Content-Length: 6
-
-abcdef
