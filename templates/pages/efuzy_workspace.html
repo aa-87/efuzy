@@ -1,127 +1,197 @@
-<section class="kgrid">
-  {{#summary}}
-  <div class="metric">
-    <div class="metric-k">{{label}}</div>
-    <div class="metric-v">{{value}}</div>
+<section class="space-y-6">
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{#summarycards}}
+    <div class="panel rounded-[1.35rem] p-4 {{tone}}">
+      <div class="text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">{{label}}</div>
+      <div class="mt-3 text-3xl font-semibold tracking-tight">{{value}}</div>
+    </div>
+    {{/summarycards}}
   </div>
-  {{/summary}}
-</section>
 
-<div class="mt-5 twocol">
-  <section class="space-y-4">
-    <div class="panel panel-pad">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <div class="section-title">Ingest</div>
-          <div class="section-lead">Upload a file now or bind a profile before the first run.</div>
-        </div>
-        <span class="chip">MVP workflow: 837 → CSV</span>
-      </div>
-      <form id="efuzyUploadForm" class="mt-4 space-y-4" action="/efuzy/api/upload" method="post" enctype="multipart/form-data">
-        <div class="workspace-drop">
-          <div class="text-base font-medium">Drop an 837 file here or choose a file</div>
-          <div class="mt-2 subtle text-sm">Designed for very large files. The server stages uploads safely and creates a queued job.</div>
-          <input class="mt-4" type="file" name="file">
-        </div>
-        <div class="grid gap-3 md:grid-cols-2">
+  <div class="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
+    <div class="space-y-6">
+      <div class="panel rounded-[1.5rem] p-5 lg:p-6">
+        <div class="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
           <div>
-            <label class="mb-2 block text-sm font-medium">Profile</label>
-            <select name="profileId">
-              <option value="">Default claim summary</option>
-              {{#profiles}}
-              <option value="{{id}}">{{name}} · {{exportMode}}</option>
-              {{/profiles}}
-            </select>
+            <div class="section-kicker">Input staging</div>
+            <h2 class="mt-2 text-xl font-semibold">Stage an 837 file</h2>
+            <p class="mt-2 text-sm muted">This step creates a queued job and lands you on the preview screen. The actual publish run still happens only after preview review.</p>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <div class="panel-soft rounded-2xl p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.16em] muted">Workflow</div>
+                <div class="mt-2 font-medium">X12 837 → configurable CSV</div>
+                <div class="mt-1 text-sm muted">Canonical claims, canonical lines, manifest, optional rebuilt X12.</div>
+              </div>
+              <div class="panel-soft rounded-2xl p-4">
+                <div class="text-xs font-semibold uppercase tracking-[0.16em] muted">Operator path</div>
+                <div class="mt-2 font-medium">Upload → Preview → Publish</div>
+                <div class="mt-1 text-sm muted">Diagnostics and trace stay visible before downloads are published.</div>
+              </div>
+            </div>
           </div>
+          <form class="space-y-4" action="/efuzy/api/upload" method="post" enctype="multipart/form-data">
+            <div class="dropzone rounded-[1.25rem] border border-dashed border-slate-500/40 p-5 panel-soft" data-dropzone>
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-sm font-semibold">Drag and drop an X12 file</div>
+                  <p class="mt-1 text-sm muted">Or click to pick one manually. Use this for single-file review and job creation.</p>
+                </div>
+                <span class="badge badge-sky">Upload</span>
+              </div>
+              <input type="file" name="file" class="mt-4 block w-full text-sm muted file:mr-3 file:rounded-xl file:border-0 file:bg-sky-400/15 file:px-3 file:py-2 file:text-sky-200">
+              <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">Saved profile</label>
+                  <select name="profileId" class="select">
+                    <option value="">None</option>
+                    {{#profiles}}<option value="{{id}}">{{name}}</option>{{/profiles}}
+                  </select>
+                </div>
+                <div class="panel-soft rounded-2xl p-4 text-sm">
+                  <div class="font-medium">Need unattended processing?</div>
+                  <div class="mt-1 muted">Use watched-folder automation for server-side input paths and repeatable output routing.</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="primary-button">Stage file</button>
+              <a href="/efuzy/automation" class="quick-button">Open automation</a>
+              <a href="/efuzy/profiles" class="quick-button">Manage profiles</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel rounded-[1.5rem] p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <label class="mb-2 block text-sm font-medium">Run mode</label>
-            <div class="rounded-xl border border-work-700 px-3 py-2 text-sm subtle">Queued on upload. Run from preview.</div>
+            <div class="section-kicker">Published jobs</div>
+            <h2 class="mt-2 text-lg font-semibold">Recent jobs</h2>
           </div>
+          <a class="quick-button" href="/efuzy/jobs">View all jobs</a>
         </div>
-        <div class="flex items-center gap-3">
-          <button class="btn-primary" type="submit">Upload file</button>
-          <div id="uploadResult" class="text-sm subtle"></div>
+        {{#recentAny}}
+        <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10">
+          <table class="grid-table min-w-full text-sm">
+            <thead class="bg-slate-500/5 text-left muted">
+              <tr>
+                <th class="px-4 py-3">Job</th>
+                <th class="px-4 py-3">Workflow</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Claims</th>
+                <th class="px-4 py-3">Lines</th>
+                <th class="px-4 py-3">Warnings</th>
+                <th class="px-4 py-3">Errors</th>
+                <th class="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#recentJobs}}
+              <tr class="table-row border-t border-slate-500/10">
+                <td class="px-4 py-3 font-medium"><a class="text-sky-300 hover:underline" href="{{href}}">#{{jobid}}</a></td>
+                <td class="px-4 py-3">{{workflow}}</td>
+                <td class="px-4 py-3"><span class="badge {{statusTone}}">{{statusLabel}}</span></td>
+                <td class="px-4 py-3">{{claims}}</td>
+                <td class="px-4 py-3">{{lines}}</td>
+                <td class="px-4 py-3">{{warning_count}}</td>
+                <td class="px-4 py-3">{{error_count}}</td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap gap-2">
+                    <a class="quick-button" href="{{href}}">Preview</a>
+                    <a class="quick-button" href="{{detailHref}}">Detail</a>
+                  </div>
+                </td>
+              </tr>
+              {{/recentJobs}}
+            </tbody>
+          </table>
         </div>
-      </form>
+        {{/recentAny}}
+        {{#recentEmpty}}<p class="mt-4 text-sm muted">No published jobs yet. Upload an 837 file to create your first queued job.</p>{{/recentEmpty}}
+      </div>
     </div>
 
-    <div class="panel panel-pad">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="section-title">Recent jobs</div>
-          <div class="section-lead">Job queue, completion state, and direct export links.</div>
-        </div>
-      </div>
-      {{#recentEmpty}}
-      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-5 subtle text-sm">No jobs yet.</div>
-      {{/recentEmpty}}
-      {{#recentJobs}}
-      <div class="mt-4 rounded-2xl border border-work-800 p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="font-medium"><a href="{{href}}" class="hover:underline">Job #{{id}}</a></div>
-            <div class="mt-1 text-sm subtle">{{fileName}}</div>
+    <div class="space-y-6">
+      <div class="panel rounded-[1.5rem] p-5">
+        <div class="section-kicker">Workspace scope</div>
+        <h2 class="mt-2 text-lg font-semibold">Supported flows</h2>
+        <div class="mt-4 space-y-3">
+          {{#workflow}}
+          <div class="panel-soft rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-medium">{{name}}</div>
+              <span class="badge badge-slate">{{tag}}</span>
+            </div>
+            <div class="mt-2 text-sm muted">{{desc}}</div>
           </div>
-          <span class="chip status-{{status}}">{{status}}</span>
-        </div>
-        <div class="mt-3 flex flex-wrap gap-2 text-xs subtle">
-          <span>{{workflowType}}</span>
-          <span>•</span>
-          <span>{{createdAt}}</span>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <a class="btn-secondary" href="{{href}}">Preview</a>
-          <a class="btn-secondary" href="{{exportHref}}">Export</a>
+          {{/workflow}}
         </div>
       </div>
-      {{/recentJobs}}
-    </div>
-  </section>
 
-  <aside class="space-y-4">
-    <div class="panel panel-pad">
-      <div class="section-title">Staged files</div>
-      <div class="section-lead">Most recent uploads staged on the server.</div>
-      {{#filesEmpty}}
-      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-4 subtle text-sm">No staged files yet.</div>
-      {{/filesEmpty}}
-      {{#files}}
-      <div class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-work-800 px-3 py-3">
-        <div class="min-w-0">
-          <div class="truncate text-sm font-medium">{{name}}</div>
-          <div class="mt-1 text-xs subtle">{{createdAt}}</div>
-        </div>
-        <span class="chip">{{size}}</span>
-      </div>
-      {{/files}}
-    </div>
-
-    <div class="panel panel-pad">
-      <div class="section-title">Profiles</div>
-      <div class="section-lead">Saved export structures.</div>
-      {{#profiles}}
-      <a href="{{href}}" class="mt-3 block rounded-xl border border-work-800 px-3 py-3 hover:border-accent-500">
-        <div class="text-sm font-medium">{{name}}</div>
-        <div class="mt-1 text-xs subtle">{{exportMode}}</div>
-      </a>
-      {{/profiles}}
-    </div>
-
-    <div class="panel panel-pad">
-      <div class="section-title">Automation</div>
-      <div class="section-lead">Watched-folder bindings and processing behavior.</div>
-      {{#automationEmpty}}
-      <div class="mt-4 rounded-xl border border-dashed border-work-700 p-4 subtle text-sm">No automation rules yet.</div>
-      {{/automationEmpty}}
-      {{#automation}}
-      <div class="mt-3 rounded-xl border border-work-800 px-3 py-3">
+      <div class="panel rounded-[1.5rem] p-5">
         <div class="flex items-center justify-between gap-3">
-          <div class="font-medium text-sm">{{name}}</div>
-          <span class="chip">{{#enabled}}enabled{{/enabled}}{{^enabled}}disabled{{/enabled}}</span>
+          <h2 class="text-lg font-semibold">Staged files</h2>
+          <span class="badge badge-violet">Latest uploads</span>
         </div>
-        <div class="mt-1 text-xs subtle">{{inputFolder}}</div>
+        {{#filesAny}}
+        <div class="mt-4 space-y-3">
+          {{#files}}
+          <div class="panel-soft rounded-2xl p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-medium">{{name}}</div>
+                <div class="mt-1 text-sm muted">File {{id}} · {{sizeText}}</div>
+              </div>
+              <span class="badge badge-slate">staged</span>
+            </div>
+          </div>
+          {{/files}}
+        </div>
+        {{/filesAny}}
+        {{#filesEmpty}}<p class="mt-4 text-sm muted">No staged files found.</p>{{/filesEmpty}}
       </div>
-      {{/automation}}
+
+      <div class="panel rounded-[1.5rem] p-5">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold">Saved profiles</h2>
+          <a class="quick-button" href="/efuzy/profiles/new">New</a>
+        </div>
+        {{#profilesAny}}
+        <div class="mt-4 space-y-3">
+          {{#profiles}}
+          <a href="{{href}}" class="block panel-soft rounded-2xl p-4 transition hover:-translate-y-[1px]">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-medium">{{name}}</div>
+              <span class="badge badge-sky">{{modeLabel}}</span>
+            </div>
+            <div class="mt-2 text-sm muted">{{workflowType}} · {{fieldCount}} fields · {{delimiter}} delimiter</div>
+          </a>
+          {{/profiles}}
+        </div>
+        {{/profilesAny}}
+        {{#profilesEmpty}}<p class="mt-4 text-sm muted">No saved profiles yet.</p>{{/profilesEmpty}}
+      </div>
+
+      <div class="panel rounded-[1.5rem] p-5">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold">Automation rules</h2>
+          <a class="quick-button" href="/efuzy/automation">Open</a>
+        </div>
+        {{#automationAny}}
+        <div class="mt-4 space-y-3">
+          {{#automation}}
+          <div class="panel-soft rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div class="font-medium">{{name}}</div>
+              <span class="badge {{enabledTone}}">{{enabledLabel}}</span>
+            </div>
+            <div class="mt-2 text-sm muted">{{workflowType}} · {{inputFolder}}</div>
+          </div>
+          {{/automation}}
+        </div>
+        {{/automationAny}}
+        {{#automationEmpty}}<p class="mt-4 text-sm muted">No automation rules saved yet.</p>{{/automationEmpty}}
+      </div>
     </div>
-  </aside>
-</div>
+  </div>
+</section>

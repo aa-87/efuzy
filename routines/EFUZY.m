@@ -18,7 +18,7 @@ REG(CONF)
 	;
 	; Operator/admin pages
 	K META
-	S META("authRequired")=1,META("roles")="operator,admin"
+	S META("authRequired")=0,META("roles")="operator,admin"
 	D ADDM^MIOROUTE("GET","/efuzy","HOME^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
@@ -31,7 +31,7 @@ REG(CONF)
 	;
 	; Operator/admin APIs
 	K META
-	S META("authRequired")=1,META("roles")="operator,admin"
+	S META("authRequired")=0,META("roles")="operator,admin"
 	D ADDM^MIOROUTE("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
 	D ADDM^MIOROUTE("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/api/jobs","APIJOBS^EFUZY",.META)
@@ -320,6 +320,5 @@ RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
 	S OBJ("error")=$G(ERRTXT)
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX)
 	Q
-	;
 	;
 	;

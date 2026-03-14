@@ -8,7 +8,8 @@ BUILDWS(CONF,REQ,CTX,TCTX)
 	D ACT(.TCTX,"workspace")
 	S TCTX("page","title")="Workspace"
 	S TCTX("page","heading")="Workspace"
-	S TCTX("page","lead")="Stage files, preview claims, run workflows, and review published jobs."
+	S TCTX("page","lead")="Stage files, inspect recent runs, and move from queued upload to publish-ready X12 837 exports."
+	S TCTX("page","eyebrow")="Operations workbench"
 	D COUNTS(.CONF,.TCTX)
 	D LOADHIST(.CONF,.REQ,.TCTX,10,"recent")
 	D LOADFILES^EFUZYFS(.CONF,8,.TCTX)
@@ -17,6 +18,7 @@ BUILDWS(CONF,REQ,CTX,TCTX)
 	I $D(TCTX("files",1)) S TCTX("filesAny")=1
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	I $D(TCTX("automation",1)) S TCTX("automationAny")=1
+	D POSTLIST(.TCTX)
 	D WORKFLOWS(.TCTX)
 	Q
 	;
@@ -26,9 +28,11 @@ BUILDPREV(CONF,REQ,CTX,JOBID,TCTX)
 	D ACT(.TCTX,"workspace")
 	S TCTX("page","title")="Preview"
 	S TCTX("page","heading")="Preview"
-	S TCTX("page","lead")="Review summary counts, diagnostics, sampled claims, service lines, and traceability."
+	S TCTX("page","lead")="Review sampled claims, service lines, diagnostics, and trace before publishing canonical artifacts."
+	S TCTX("page","eyebrow")="Workflow preview"
 	S TCTX("job","id")=+$G(JOBID)
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
+	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADPREV(.CONF,+$G(JOBID),.TCTX)
 	Q
 	;
@@ -38,7 +42,8 @@ BUILDJOBS(CONF,REQ,CTX,TCTX)
 	D ACT(.TCTX,"jobs")
 	S TCTX("page","title")="Jobs"
 	S TCTX("page","heading")="Job History"
-	S TCTX("page","lead")="Review published workflow runs, filter by status, and open detail pages or downloads."
+	S TCTX("page","lead")="Review published workflow runs, filter by status, and open detail pages or artifact downloads."
+	S TCTX("page","eyebrow")="Operational history"
 	D LOADHIST(.CONF,.REQ,.TCTX,50,"jobs")
 	Q
 	;
@@ -48,10 +53,12 @@ BUILDPROFS(CONF,REQ,CTX,TCTX)
 	D ACT(.TCTX,"profiles")
 	S TCTX("page","title")="Profiles"
 	S TCTX("page","heading")="Export Profiles"
-	S TCTX("page","lead")="Save field sets, column order, delimiter settings, and output naming rules."
+	S TCTX("page","lead")="Save field sets, column order, delimiter rules, and output naming for biller-friendly CSV exports."
+	S TCTX("page","eyebrow")="Profile catalog"
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADMAPS^EFU837EXPMP(.TCTX)
+	D POSTLIST(.TCTX)
 	Q
 	;
 BUILDPROF(CONF,REQ,CTX,ID,TCTX)
@@ -60,9 +67,12 @@ BUILDPROF(CONF,REQ,CTX,ID,TCTX)
 	D ACT(.TCTX,"profiles")
 	S TCTX("page","title")="Profile"
 	S TCTX("page","heading")="Profile Editor"
-	S TCTX("page","lead")="Configure export mode, selected fields, headers, quoting, and file naming."
+	S TCTX("page","lead")="Configure export mode, field selection, quoting, headers, and naming without leaving the SSR workspace."
+	S TCTX("page","eyebrow")="Profile design"
 	D LOADPROF^EFUZYCFG(.CONF,ID,.TCTX)
 	D LOADMAPS^EFU837EXPMP(.TCTX)
+	D MODESEL(.TCTX)
+	D POSTPROF(.TCTX)
 	Q
 	;
 BUILDAUTO(CONF,REQ,CTX,TCTX)
@@ -71,11 +81,13 @@ BUILDAUTO(CONF,REQ,CTX,TCTX)
 	D ACT(.TCTX,"automation")
 	S TCTX("page","title")="Automation"
 	S TCTX("page","heading")="Automation"
-	S TCTX("page","lead")="Bind folders, choose a profile, and define success and failure handling rules."
+	S TCTX("page","lead")="Bind folders, choose a profile, and define success or failure handling for repeatable watched-folder runs."
+	S TCTX("page","eyebrow")="Folder pipelines"
 	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX)
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
 	I $D(TCTX("automation",1)) S TCTX("automationAny")=1
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
+	D POSTLIST(.TCTX)
 	Q
 	;
 BUILDJOB(CONF,REQ,CTX,ID,TCTX)
@@ -85,6 +97,7 @@ BUILDJOB(CONF,REQ,CTX,ID,TCTX)
 	S TCTX("page","title")="Job Detail"
 	S TCTX("page","heading")="Job Detail"
 	S TCTX("page","lead")="Inspect artifacts, diagnostics, preview data, and trace rows for a completed or failed job."
+	S TCTX("page","eyebrow")="Published job"
 	S TCTX("job","id")=+$G(ID)
 	D LOADJOB(.CONF,+$G(ID),.TCTX)
 	Q
@@ -93,20 +106,28 @@ BASE(TCTX)
 	K TCTX
 	S TCTX("app","name")="efuzy"
 	S TCTX("app","tagline")="Self-hosted file-processing workflow workspace"
+	S TCTX("app","version")="MVP"
 	S TCTX("theme","mode")="dark"
+	S TCTX("theme","toggleLabel")="Toggle theme"
+	S TCTX("shell","eyebrow")="efuzy / MUMPS.IO"
+	S TCTX("badges","mvp")="837 to CSV"
+	S TCTX("badges","arch")="SSR-first"
 	S TCTX("nav",1,"key")="workspace"
 	S TCTX("nav",1,"label")="Workspace"
 	S TCTX("nav",1,"href")="/efuzy/workspace"
+	S TCTX("nav",1,"hint")="Uploads, queues, recent jobs"
 	S TCTX("nav",2,"key")="jobs"
 	S TCTX("nav",2,"label")="Jobs"
 	S TCTX("nav",2,"href")="/efuzy/jobs"
+	S TCTX("nav",2,"hint")="Published runs and artifacts"
 	S TCTX("nav",3,"key")="profiles"
 	S TCTX("nav",3,"label")="Profiles"
 	S TCTX("nav",3,"href")="/efuzy/profiles"
+	S TCTX("nav",3,"hint")="CSV output definitions"
 	S TCTX("nav",4,"key")="automation"
 	S TCTX("nav",4,"label")="Automation"
 	S TCTX("nav",4,"href")="/efuzy/automation"
-	S TCTX("badges","mvp")="837 → CSV"
+	S TCTX("nav",4,"hint")="Folder-driven workflows"
 	Q
 	;
 ACT(TCTX,KEY)
@@ -118,12 +139,16 @@ ACT(TCTX,KEY)
 COUNTS(CONF,TCTX)
 	S TCTX("summarycards",1,"label")="Queued Jobs"
 	S TCTX("summarycards",1,"value")=$$COUNTIDX("queued")
+	S TCTX("summarycards",1,"tone")="tone-amber"
 	S TCTX("summarycards",2,"label")="Running Jobs"
 	S TCTX("summarycards",2,"value")=$$COUNTIDX("running")
+	S TCTX("summarycards",2,"tone")="tone-sky"
 	S TCTX("summarycards",3,"label")="Completed Jobs"
 	S TCTX("summarycards",3,"value")=$$COUNTIDX("completed")
+	S TCTX("summarycards",3,"tone")="tone-emerald"
 	S TCTX("summarycards",4,"label")="Staged Files"
 	S TCTX("summarycards",4,"value")=$$FILECOUNT()
+	S TCTX("summarycards",4,"tone")="tone-violet"
 	Q
 	;
 COUNTIDX(STATUS)
@@ -140,9 +165,14 @@ FILECOUNT()
 	;
 WORKFLOWS(TCTX)
 	S TCTX("workflow",1,"name")="X12 837 → configurable CSV"
-	S TCTX("workflow",1,"desc")="Preview claims and lines, export canonical CSV, and optionally rebuild deterministic X12."
-	S TCTX("workflow",2,"name")="Watched folder automation"
-	S TCTX("workflow",2,"desc")="Bind input, output, archive, and failure folders to a saved profile for repeatable processing."
+	S TCTX("workflow",1,"desc")="Preview claims and service lines, export canonical CSV, and optionally rebuild deterministic X12."
+	S TCTX("workflow",1,"tag")="Primary MVP"
+	S TCTX("workflow",2,"name")="Published job artifacts"
+	S TCTX("workflow",2,"desc")="Keep canonical claims, canonical lines, manifests, round-trip output, and trace in one operator-facing job record."
+	S TCTX("workflow",2,"tag")="Artifact contract"
+	S TCTX("workflow",3,"name")="Watched folder automation"
+	S TCTX("workflow",3,"desc")="Bind input, output, archive, and failure folders to a saved profile for repeatable processing."
+	S TCTX("workflow",3,"tag")="No heavy SPA"
 	Q
 	;
 LOADHIST(CONF,REQ,TCTX,LIMIT,MODE)
@@ -162,9 +192,12 @@ LOADHIST(CONF,REQ,TCTX,LIMIT,MODE)
 	. . M TCTX("recentJobs",N)=@ROOT@("response","job",N)
 	. . S TCTX("recentJobs",N,"href")="/efuzy/preview/"_+$G(@ROOT@("response","job",N,"jobid"))
 	. . S TCTX("recentJobs",N,"detailHref")="/efuzy/jobs/"_+$G(@ROOT@("response","job",N,"jobid"))
+	. . D STATUSMETA($NA(TCTX("recentJobs",N)))
 	. E  D
 	. . M TCTX("jobs",N)=@ROOT@("response","job",N)
 	. . S TCTX("jobs",N,"href")="/efuzy/jobs/"_+$G(@ROOT@("response","job",N,"jobid"))
+	. . S TCTX("jobs",N,"previewHref")="/efuzy/preview/"_+$G(@ROOT@("response","job",N,"jobid"))
+	. . D STATUSMETA($NA(TCTX("jobs",N)))
 	S TCTX("history","count")=+$G(@ROOT@("response","jobs"))
 	I $D(TCTX("recentJobs",1)) S TCTX("recentAny")=1
 	I $D(TCTX("jobs",1)) S TCTX("jobsAny")=1
@@ -181,6 +214,7 @@ LOADPREV(CONF,JOBID,TCTX)
 	S TCTX("job","fileId")=FILEID
 	S TCTX("job","inputPath")=INPATH
 	S TCTX("job","status")=STATUS
+	S TCTX("job","fileName")=$$GETNAME^EFUZYFS(FILEID)
 	I STATUS="completed"!(STATUS="failed") D  Q
 	. D LOADJOB(.CONF,JOBID,.TCTX)
 	I INPATH="" S TCTX("jobMissing")=1 Q
@@ -192,6 +226,8 @@ LOADPREV(CONF,JOBID,TCTX)
 	S TCTX("job","status")=$S(STATUS'="":STATUS,1:"queued")
 	S TCTX("job","canRun")=1
 	S TCTX("job","previewTransient")=1
+	D STATUSMETA($NA(TCTX("job")))
+	D POSTPREV(.TCTX)
 	Q
 	;
 LOADJOB(CONF,JOBID,TCTX)
@@ -203,10 +239,12 @@ LOADJOB(CONF,JOBID,TCTX)
 	I '+$G(RES("ok")),$G(RES("http_status"))=404 S TCTX("jobMissing")=1 Q
 	D ADAPT(ROOT,.TCTX,JOBID,1)
 	S TCTX("job","canRun")=$S($G(TCTX("job","status"))'="running":1,1:0)
+	D STATUSMETA($NA(TCTX("job")))
+	D POSTDETAIL(.TCTX)
 	Q
 	;
 ADAPT(ROOT,TCTX,JOBID,DETAIL)
-	N RROOT,N,M,KEY,F,IDX
+	N RROOT,N,M,KEY,F,IDX,RT,WT,ET
 	S RROOT=$NA(@ROOT@("response"))
 	S TCTX("job","id")=+$G(JOBID)
 	S TCTX("job","status")=$G(@RROOT@("job","status"))
@@ -219,30 +257,36 @@ ADAPT(ROOT,TCTX,JOBID,DETAIL)
 	S TCTX("job","mode")=$G(@RROOT@("mode"))
 	S TCTX("job","isCompleted")=$S($G(@RROOT@("job","status"))="completed":1,1:0)
 	S TCTX("job","isFailed")=$S($G(@RROOT@("job","status"))="failed":1,1:0)
-	;
 	K TCTX("summary")
+	S WT=+$G(@RROOT@("summary","warnings"),+$G(@RROOT@("diagnostic","warnings")))
+	S ET=+$G(@RROOT@("summary","errors"),+$G(@RROOT@("diagnostic","errors")))
+	S RT=+$G(@RROOT@("summary","roundtrip_ok"))
 	S TCTX("summary",1,"label")="Claims"
 	S TCTX("summary",1,"value")=+$G(@RROOT@("summary","claims"))
+	S TCTX("summary",1,"tone")="tone-slate"
 	S TCTX("summary",2,"label")="Lines"
 	S TCTX("summary",2,"value")=+$G(@RROOT@("summary","lines"))
+	S TCTX("summary",2,"tone")="tone-slate"
 	S TCTX("summary",3,"label")="Transactions"
 	S TCTX("summary",3,"value")=+$G(@RROOT@("summary","transactions"))
+	S TCTX("summary",3,"tone")="tone-slate"
 	S TCTX("summary",4,"label")="Warnings"
-	S TCTX("summary",4,"value")=+$G(@RROOT@("summary","warnings"),+$G(@RROOT@("diagnostic","warnings")))
+	S TCTX("summary",4,"value")=WT
+	S TCTX("summary",4,"tone")=$S(WT>0:"tone-amber",1:"tone-slate")
 	S TCTX("summary",5,"label")="Errors"
-	S TCTX("summary",5,"value")=+$G(@RROOT@("summary","errors"),+$G(@RROOT@("diagnostic","errors")))
+	S TCTX("summary",5,"value")=ET
+	S TCTX("summary",5,"tone")=$S(ET>0:"tone-rose",1:"tone-slate")
 	S TCTX("summary",6,"label")="Round-trip"
-	S TCTX("summary",6,"value")=$S(+$G(@RROOT@("summary","roundtrip_ok")):"ok",1:"n/a")
-	;
+	S TCTX("summary",6,"value")=$S(RT:"ok",1:"n/a")
+	S TCTX("summary",6,"tone")=$S(RT:"tone-emerald",1:"tone-slate")
 	S TCTX("summaryData","claims")=+$G(@RROOT@("summary","claims"))
 	S TCTX("summaryData","lines")=+$G(@RROOT@("summary","lines"))
 	S TCTX("summaryData","transactions")=+$G(@RROOT@("summary","transactions"))
-	S TCTX("summaryData","warnings")=+$G(@RROOT@("summary","warnings"),+$G(@RROOT@("diagnostic","warnings")))
-	S TCTX("summaryData","errors")=+$G(@RROOT@("summary","errors"),+$G(@RROOT@("diagnostic","errors")))
-	S TCTX("summaryData","roundtrip_ok")=+$G(@RROOT@("summary","roundtrip_ok"))
+	S TCTX("summaryData","warnings")=WT
+	S TCTX("summaryData","errors")=ET
+	S TCTX("summaryData","roundtrip_ok")=RT
 	S TCTX("trace","summary","fields")=+$G(@RROOT@("trace","summary","fields"))
 	S TCTX("trace","summary","segments")=+$G(@RROOT@("trace","summary","segments"))
-	;
 	K TCTX("preview")
 	S N=0 F  S N=$O(@RROOT@("preview","claim",N)) Q:'N  M TCTX("preview","claims",N)=@RROOT@("preview","claim",N)
 	S N=0 F  S N=$O(@RROOT@("preview","line",N)) Q:'N  M TCTX("preview","lines",N)=@RROOT@("preview","line",N)
@@ -250,7 +294,6 @@ ADAPT(ROOT,TCTX,JOBID,DETAIL)
 	S TCTX("preview","lineCount")=+$G(@RROOT@("preview","lines"),$O(TCTX("preview","lines",""),-1))
 	I $D(TCTX("preview","claims",1)) S TCTX("preview","claimsAny")=1
 	I $D(TCTX("preview","lines",1)) S TCTX("preview","linesAny")=1
-	;
 	K TCTX("diagnostic")
 	S TCTX("diagnostic","warnings")=+$G(@RROOT@("diagnostic","warnings"))
 	S TCTX("diagnostic","errors")=+$G(@RROOT@("diagnostic","errors"))
@@ -261,16 +304,14 @@ ADAPT(ROOT,TCTX,JOBID,DETAIL)
 	. . I $G(TCTX("diagnostic",KEY,N,"msg"))="" S TCTX("diagnostic",KEY,N,"msg")=$G(TCTX("diagnostic",KEY,N,"message"))
 	I $D(TCTX("diagnostic","warning",1)) S TCTX("diagnostic","warningAny")=1
 	I $D(TCTX("diagnostic","error",1)) S TCTX("diagnostic","errorAny")=1
-	;
 	K TCTX("downloads")
 	S N=0 F  S N=$O(@RROOT@("download",N)) Q:'N  D
 	. M TCTX("downloads",N)=@RROOT@("download",N)
 	. S KEY=$G(TCTX("downloads",N,"key"))
 	. I +$G(JOBID)>0 S TCTX("downloads",N,"href")="/efuzy/download/"_+JOBID_"/"_KEY
-	;
+	. D DLMETA($NA(TCTX("downloads",N)))
 	I $D(TCTX("downloads",1)) S TCTX("downloadsAny")=1
 	I '$D(TCTX("downloads",1)) S TCTX("downloadsEmpty")=1
-	;
 	K TCTX("trace","claim"),TCTX("trace","line")
 	S N=0,IDX=0 F  S N=$O(@RROOT@("trace","claim",N)) Q:'N  D
 	. S IDX=IDX+1
@@ -279,6 +320,7 @@ ADAPT(ROOT,TCTX,JOBID,DETAIL)
 	. . S M=M+1
 	. . S TCTX("trace","claim",IDX,"field",M,"name")=F
 	. . M TCTX("trace","claim",IDX,"field",M)=@RROOT@("trace","claim",N,"field",F)
+	. . D TRACEF($NA(TCTX("trace","claim",IDX,"field",M)))
 	S N=0,IDX=0 F  S N=$O(@RROOT@("trace","line",N)) Q:'N  D
 	. S IDX=IDX+1
 	. S TCTX("trace","line",IDX,"cid")=$G(@RROOT@("trace","line",N,"cid"))
@@ -287,8 +329,123 @@ ADAPT(ROOT,TCTX,JOBID,DETAIL)
 	. . S M=M+1
 	. . S TCTX("trace","line",IDX,"field",M,"name")=F
 	. . M TCTX("trace","line",IDX,"field",M)=@RROOT@("trace","line",N,"field",F)
+	. . D TRACEF($NA(TCTX("trace","line",IDX,"field",M)))
 	I $D(TCTX("trace","claim",1)) S TCTX("trace","claimAny")=1
 	I $D(TCTX("trace","line",1)) S TCTX("trace","lineAny")=1
+	D STATUSMETA($NA(TCTX("job")))
+	D POSTPREV(.TCTX)
 	Q
+	;
+STATUSMETA(REF)
+	N ST,LBL,TN
+	S ST=$ZCONVERT($G(@REF@("status")),"L")
+	I ST="" S ST="queued"
+	S LBL=$$STATUSLBL(ST)
+	S TN=$$STATUSTN(ST)
+	S @REF@("status")=ST
+	S @REF@("statusLabel")=LBL
+	S @REF@("statusTone")=TN
+	S @REF@("isQueued")=$S(ST="queued":1,1:0)
+	S @REF@("isRunning")=$S(ST="running":1,1:0)
+	S @REF@("isCompleted")=$S(ST="completed":1,1:0)
+	S @REF@("isFailed")=$S(ST="failed":1,1:0)
+	Q
+	;
+STATUSLBL(ST)
+	I $G(ST)="completed" Q "Completed"
+	I $G(ST)="failed" Q "Failed"
+	I $G(ST)="running" Q "Running"
+	I $G(ST)="queued" Q "Queued"
+	Q $$UP($G(ST))
+	;
+STATUSTN(ST)
+	I $G(ST)="completed" Q "badge-emerald"
+	I $G(ST)="failed" Q "badge-rose"
+	I $G(ST)="running" Q "badge-sky"
+	I $G(ST)="queued" Q "badge-amber"
+	Q "badge-slate"
+	;
+DLMETA(REF)
+	N K,T
+	S K=$G(@REF@("key"))
+	S T=$G(@REF@("type"))
+	S @REF@("badge")=$S(K["canonical":"Canonical",K["rebuilt":"Rebuilt",K["roundtrip":"Round-trip",K["trace":"Trace",1:"Artifact")
+	S @REF@("tone")=$S(K["canonical":"tone-sky",K["rebuilt":"tone-emerald",K["roundtrip":"tone-violet",K["trace":"tone-amber",1:"tone-slate")
+	I $G(@REF@("name"))="" S @REF@("name")=$S(K'="":K,1:"download")
+	I $G(@REF@("type"))="" S @REF@("type")=$S(K["x12":"edi",1:"file")
+	Q
+	;
+TRACEF(REF)
+	S @REF@("exactLabel")=$S(+$G(@REF@("exact")):"Exact",1:"Best effort")
+	S @REF@("exactTone")=$S(+$G(@REF@("exact")):"badge-emerald",1:"badge-amber")
+	Q
+	;
+MODESEL(TCTX)
+	N I,MODE
+	S MODE=$G(TCTX("profile","exportMode")) I MODE="" S MODE="claim_summary"
+	S I=0
+	F  S I=$O(TCTX("maps","modes",I)) Q:'I  D
+	. S TCTX("maps","modes",I,"isSelected")=$S($G(TCTX("maps","modes",I,"id"))=MODE:1,1:0)
+	S TCTX("profile","isClaimSummary")=$S(MODE="claim_summary":1,1:0)
+	S TCTX("profile","isServiceLine")=$S(MODE="service_line":1,1:0)
+	S TCTX("profile","isSubscriberPatient")=$S(MODE="subscriber_patient":1,1:0)
+	S TCTX("profile","isProviderContext")=$S(MODE="provider_context":1,1:0)
+	S TCTX("profile","isCustom")=$S(MODE="custom":1,1:0)
+	S TCTX("profile","headerOn")=$S(+$G(TCTX("profile","header"),1):1,1:0)
+	S TCTX("profile","headerOff")=$S(+$G(TCTX("profile","header"),1):0,1:1)
+	S TCTX("profile","quoteMinimal")=$S($G(TCTX("profile","quoteMode"),"minimal")="minimal":1,1:0)
+	S TCTX("profile","quoteAll")=$S($G(TCTX("profile","quoteMode"))="all":1,1:0)
+	S TCTX("profile","quoteNone")=$S($G(TCTX("profile","quoteMode"))="none":1,1:0)
+	S TCTX("profile","rowClaim")=$S($G(TCTX("profile","rowSource"),"claim")="claim":1,1:0)
+	S TCTX("profile","rowLine")=$S($G(TCTX("profile","rowSource"))="line":1,1:0)
+	Q
+	;
+POSTLIST(TCTX)
+	N N
+	S N=0 F  S N=$O(TCTX("profiles",N)) Q:'N  D
+	. S TCTX("profiles",N,"fieldCount")=$$CSVCT($G(TCTX("profiles",N,"selectedFields")))
+	. S TCTX("profiles",N,"modeLabel")=$$UP($TR($G(TCTX("profiles",N,"exportMode")),"_"," "))
+	S N=0 F  S N=$O(TCTX("files",N)) Q:'N  D
+	. S TCTX("files",N,"sizeText")=$$HUMAN($G(TCTX("files",N,"size")))
+	S N=0 F  S N=$O(TCTX("automation",N)) Q:'N  D
+	. S TCTX("automation",N,"enabledLabel")=$S(+$G(TCTX("automation",N,"enabled")):"Enabled",1:"Disabled")
+	. S TCTX("automation",N,"enabledTone")=$S(+$G(TCTX("automation",N,"enabled")):"badge-emerald",1:"badge-slate")
+	Q
+	;
+POSTPREV(TCTX)
+	S TCTX("job","compareModeLabel")=$$UP($TR($G(TCTX("job","compareMode")),"_"," "))
+	I $G(TCTX("job","compareModeLabel"))="" S TCTX("job","compareModeLabel")="Export safe"
+	S TCTX("job","traceLabel")=$S(+$G(TCTX("trace","summary","fields"))>0:"Trace ready",1:"Trace sample pending")
+	Q
+	;
+POSTDETAIL(TCTX)
+	D POSTPREV(.TCTX)
+	Q
+	;
+POSTPROF(TCTX)
+	S TCTX("profile","selectedFieldCount")=$$CSVCT($G(TCTX("profile","selectedFieldsText")))
+	S TCTX("profile","fieldOrderCount")=$$CSVCT($G(TCTX("profile","fieldOrderText")))
+	Q
+	;
+CSVCT(X)
+	N I,C,P
+	S C=0
+	F I=1:1:$L($G(X),",") S P=$$TRIM^MIOUTIL($P($G(X),",",I)) I P'="" S C=C+1
+	Q C
+	;
+HUMAN(N)
+	N X
+	S X=+$G(N)
+	I X>999999 Q $J(X/1000000,0,1)_" MB"
+	I X>999 Q $J(X/1000,0,1)_" KB"
+	Q X_" B"
+	;
+UP(X)
+	N Y,I,C,O,PREV
+	S Y=$ZCONVERT($G(X),"L"),O="",PREV=" "
+	F I=1:1:$L(Y) S C=$E(Y,I) D
+	. I PREV=" " S O=O_$ZCONVERT(C,"U") S PREV=C Q
+	. S O=O_C,PREV=C
+	Q O
 	;
 	;

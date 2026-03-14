@@ -167,3 +167,11 @@
 {"ts":"2026-03-14 00:25:43","event":"add","file":"/home/ahmed/efuzy/templates/partials/ui_nav.html"}
 {"ts":"2026-03-14 00:25:43","event":"add","file":"/home/ahmed/efuzy/templates/partials/ui_tpl_card_grid.html"}
 {"ts":"2026-03-14 00:25:43","event":"add","file":"/home/ahmed/efuzy/templates/partials/ui_tpl_card_list.html"}
+{"ts":"2026-03-14 00:43:25","event":"mod","file":"/home/ahmed/efuzy/templates/layouts/efuzy_layout.html"}
+{"ts":"2026-03-14 00:43:32","event":"add","file":"/home/ahmed/efuzy/templates/pages/efuzy_jobs.html"}
+{"ts":"2026-03-14 00:43:33","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_preview.html"}
+{"ts":"2026-03-14 00:43:33","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_profile_edit.html"}
+{"ts":"2026-03-14 00:43:37","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_profiles.html"}
+{"ts":"2026-03-14 00:43:37","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_workspace.html"}
+{"ts":"2026-03-14 00:43:38","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_automation.html"}
+{"ts":"2026-03-14 00:43:38","event":"mod","file":"/home/ahmed/efuzy/templates/pages/efuzy_job_detail.html"}

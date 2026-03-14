@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en" data-theme="{{theme.mode}}">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{page.title}} · {{app.name}}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -11,177 +11,212 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter','ui-sans-serif','system-ui','sans-serif']
-          },
-          colors: {
-            work: {
-              950:'#0b0f19',
-              900:'#0f172a',
-              800:'#172033',
-              700:'#23304a',
-              600:'#334155',
-              500:'#64748b',
-              400:'#94a3b8',
-              300:'#cbd5e1',
-              200:'#e2e8f0',
-              100:'#f1f5f9',
-              50:'#f8fafc'
-            },
-            accent: {
-              600:'#4f46e5',
-              500:'#6366f1',
-              400:'#818cf8'
-            }
-          },
-          boxShadow: {
-            panel: '0 10px 30px rgba(2,6,23,0.18)'
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
           }
         }
       }
-    }
+    };
   </script>
-  <style type="text/tailwindcss">
-    @layer base {
-      html { @apply antialiased; }
-      body { @apply bg-work-950 text-work-100 dark:bg-work-950 dark:text-work-100 bg-work-50 text-work-900; }
-      [data-theme="light"] body { @apply bg-work-50 text-work-900; }
-      [data-theme="light"] .panel { @apply bg-white border-work-200; }
-      [data-theme="light"] .subtle { @apply text-work-600; }
-      [data-theme="light"] .chip { @apply bg-work-100 text-work-700 border-work-200; }
-      [data-theme="light"] .table-head { @apply bg-work-100 text-work-700; }
-      [data-theme="light"] .table-row { @apply border-work-200 hover:bg-work-50; }
-      [data-theme="dark"] .panel { @apply bg-work-900/95 border-work-800; }
-      [data-theme="dark"] .subtle { @apply text-work-400; }
-      [data-theme="dark"] .chip { @apply bg-work-800 text-work-200 border-work-700; }
-      [data-theme="dark"] .table-head { @apply bg-work-900 text-work-400; }
-      [data-theme="dark"] .table-row { @apply border-work-800 hover:bg-work-900/70; }
-      input, select, textarea {
-        @apply w-full rounded-xl border border-work-700 bg-work-950/80 px-3 py-2 text-sm text-work-100 outline-none ring-0 transition;
-      }
-      [data-theme="light"] input, [data-theme="light"] select, [data-theme="light"] textarea {
-        @apply bg-white border-work-300 text-work-900;
-      }
-      input:focus, select:focus, textarea:focus {
-        @apply border-accent-500 ring-2 ring-accent-500/20;
-      }
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --bg-alt: #ffffff;
+      --panel: rgba(255,255,255,.88);
+      --panel-2: #ffffff;
+      --border: rgba(15,23,42,.10);
+      --text: #0f172a;
+      --muted: #475569;
+      --sidebar: #e9eef8;
+      --shadow: 0 10px 30px rgba(15,23,42,.08);
     }
-    @layer components {
-      .app-shell { @apply min-h-screen grid grid-cols-[16rem_1fr]; }
-      .sidebar { @apply border-r border-work-800 bg-work-900/80 backdrop-blur; }
-      .topbar { @apply flex items-center justify-between gap-4 border-b border-work-800 px-5 py-3; }
-      .panel { @apply rounded-2xl border shadow-panel; }
-      .panel-pad { @apply p-4 md:p-5; }
-      .btn { @apply inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition; }
-      .btn-primary { @apply btn bg-accent-600 text-white hover:bg-accent-500; }
-      .btn-secondary { @apply btn border border-work-700 bg-work-900 text-work-100 hover:bg-work-800; }
-      [data-theme="light"] .btn-secondary { @apply bg-white border-work-300 text-work-900 hover:bg-work-50; }
-      .chip { @apply inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium; }
-      .table-compact { @apply w-full text-sm; }
-      .table-compact th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide; }
-      .table-compact td { @apply px-3 py-2 align-top; }
-      .table-head { @apply border-b; }
-      .table-row { @apply border-b; }
-      .metric { @apply panel panel-pad; }
-      .metric-k { @apply text-xs uppercase tracking-[0.12em] subtle; }
-      .metric-v { @apply mt-2 text-2xl font-semibold; }
-      .workspace-drop { @apply rounded-2xl border-2 border-dashed border-work-700 bg-work-950/50 p-6 text-center transition hover:border-accent-500; }
-      [data-theme="light"] .workspace-drop { @apply bg-work-50 border-work-300; }
-      .section-title { @apply text-lg font-semibold tracking-tight; }
-      .section-lead { @apply subtle mt-1 text-sm; }
-      .nav-link { @apply flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-work-800; }
-      [data-theme="light"] .nav-link { @apply hover:bg-work-100; }
-      .nav-link-active { @apply bg-accent-600/15 text-accent-400; }
-      .status-queued { @apply bg-amber-500/15 text-amber-300 border border-amber-400/20; }
-      .status-running { @apply bg-sky-500/15 text-sky-300 border border-sky-400/20; }
-      .status-completed { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-400/20; }
-      .status-failed { @apply bg-rose-500/15 text-rose-300 border border-rose-400/20; }
-      .kgrid { @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4; }
-      .twocol { @apply grid gap-4 xl:grid-cols-[1.2fr_0.8fr]; }
+    html[data-theme="dark"] {
+      --bg: #07111f;
+      --bg-alt: #0c1728;
+      --panel: rgba(8,16,30,.88);
+      --panel-2: rgba(12,23,40,.96);
+      --border: rgba(148,163,184,.16);
+      --text: #dbe7f5;
+      --muted: #94a3b8;
+      --sidebar: #081222;
+      --shadow: 0 14px 36px rgba(2,6,23,.35);
     }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(14,165,233,.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(99,102,241,.07), transparent 24%),
+        var(--bg);
+      color: var(--text);
+    }
+    .app-shell { min-height: 100vh; }
+    .app-sidebar {
+      background: linear-gradient(180deg, rgba(8,16,30,.96), rgba(8,16,30,.88));
+      border-right: 1px solid var(--border);
+    }
+    html[data-theme="light"] .app-sidebar {
+      background: linear-gradient(180deg, rgba(233,238,248,.98), rgba(244,247,252,.95));
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .panel-soft {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+    .muted { color: var(--muted); }
+    .section-kicker {
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: .68rem;
+      color: #7dd3fc;
+    }
+    html[data-theme="light"] .section-kicker { color: #0284c7; }
+    .grid-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+    .grid-table tbody td { white-space: nowrap; }
+    .data-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+    .data-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,.25); border-radius: 999px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      border-radius: 999px; padding: .35rem .7rem; font-size: .72rem; font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .badge::before { content: ''; width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; opacity: .9; }
+    .badge-slate { color: #94a3b8; background: rgba(148,163,184,.10); border-color: rgba(148,163,184,.16); }
+    .badge-sky { color: #7dd3fc; background: rgba(14,165,233,.12); border-color: rgba(14,165,233,.18); }
+    .badge-emerald { color: #6ee7b7; background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.18); }
+    .badge-amber { color: #fbbf24; background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.20); }
+    .badge-rose { color: #fb7185; background: rgba(244,63,94,.12); border-color: rgba(244,63,94,.20); }
+    .badge-violet { color: #c4b5fd; background: rgba(139,92,246,.12); border-color: rgba(139,92,246,.20); }
+    .tone-slate { background: linear-gradient(180deg, rgba(148,163,184,.10), rgba(148,163,184,.05)); border-color: rgba(148,163,184,.14); }
+    .tone-sky { background: linear-gradient(180deg, rgba(14,165,233,.12), rgba(14,165,233,.05)); border-color: rgba(14,165,233,.18); }
+    .tone-emerald { background: linear-gradient(180deg, rgba(16,185,129,.14), rgba(16,185,129,.05)); border-color: rgba(16,185,129,.18); }
+    .tone-amber { background: linear-gradient(180deg, rgba(245,158,11,.14), rgba(245,158,11,.05)); border-color: rgba(245,158,11,.18); }
+    .tone-rose { background: linear-gradient(180deg, rgba(244,63,94,.14), rgba(244,63,94,.05)); border-color: rgba(244,63,94,.18); }
+    .tone-violet { background: linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.05)); border-color: rgba(139,92,246,.18); }
+    .nav-link {
+      display: block; border-radius: 1rem; border: 1px solid transparent; padding: .85rem .9rem;
+      color: var(--muted); transition: all .16s ease;
+    }
+    .nav-link:hover { background: rgba(148,163,184,.08); color: var(--text); }
+    .nav-link.active { background: rgba(14,165,233,.10); color: #7dd3fc; border-color: rgba(14,165,233,.18); }
+    html[data-theme="light"] .nav-link.active { color: #0369a1; }
+    .quick-button {
+      border-radius: .9rem; border: 1px solid var(--border); padding: .65rem .95rem; font-size: .82rem;
+      background: rgba(148,163,184,.06);
+    }
+    .quick-button:hover { background: rgba(148,163,184,.11); }
+    .primary-button {
+      border-radius: .95rem; padding: .75rem 1rem; font-size: .84rem; font-weight: 700;
+      color: #03131f; background: linear-gradient(180deg, #67e8f9, #38bdf8); border: 1px solid rgba(56,189,248,.3);
+    }
+    .primary-button:hover { filter: brightness(1.03); }
+    .field, .select, .textarea {
+      width: 100%; border-radius: .95rem; border: 1px solid var(--border);
+      background: rgba(2,6,23,.16); color: var(--text); padding: .78rem .9rem; font-size: .87rem;
+    }
+    html[data-theme="light"] .field, html[data-theme="light"] .select, html[data-theme="light"] .textarea {
+      background: rgba(255,255,255,.75);
+    }
+    .field::placeholder, .textarea::placeholder { color: var(--muted); }
+    .table-row:hover { background: rgba(148,163,184,.06); }
+    .dropzone.is-dragover { border-color: rgba(56,189,248,.45); background: rgba(14,165,233,.08); }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar px-4 py-5 bg-white dark:bg-work-900">
-      <div class="mb-6">
-        <div class="text-xs uppercase tracking-[0.22em] subtle">workspace</div>
-        <div class="mt-2 text-2xl font-semibold">{{app.name}}</div>
-        <div class="mt-2 text-sm subtle">{{app.tagline}}</div>
-        <div class="mt-4">
-          <span class="chip">{{badges.mvp}}</span>
+<body class="font-sans antialiased">
+  <div class="app-shell lg:grid lg:grid-cols-[17rem_1fr]">
+    <aside class="app-sidebar px-4 py-5 lg:sticky lg:top-0 lg:h-screen lg:px-5 lg:py-6">
+      <div class="panel rounded-[1.4rem] p-4">
+        <div class="section-kicker">{{shell.eyebrow}}</div>
+        <div class="mt-2 text-xl font-semibold tracking-tight">{{app.name}}</div>
+        <div class="mt-1 text-sm muted">{{app.tagline}}</div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="badge badge-sky">{{badges.mvp}}</span>
+          <span class="badge badge-violet">{{badges.arch}}</span>
         </div>
       </div>
-      <nav class="space-y-1">
+      <nav class="mt-4 space-y-2">
         {{#nav}}
-        <a href="{{href}}" class="nav-link {{#isActive}}nav-link-active{{/isActive}}">
-          <span>{{label}}</span>
-          <span class="subtle">→</span>
+        <a href="{{href}}" class="nav-link {{#isActive}}active{{/isActive}}">
+          <div class="text-sm font-medium">{{label}}</div>
+          <div class="mt-1 text-xs muted">{{hint}}</div>
         </a>
         {{/nav}}
       </nav>
-      <div class="mt-8 panel panel-pad">
-        <div class="text-xs uppercase tracking-[0.16em] subtle">Design notes</div>
-        <ul class="mt-3 space-y-2 text-sm subtle">
-          <li>SSR-first MIOTPL pages</li>
-          <li>Tailwind dense workbench UI</li>
-          <li>Thin desktop-like shell</li>
-          <li>Workflow engine stays central</li>
-        </ul>
+      <div class="panel mt-4 rounded-[1.25rem] p-4 text-sm">
+        <div class="font-semibold">Operational notes</div>
+        <div class="mt-2 muted">Upload first, preview before publish, then keep canonical claims, lines, manifest, and optional rebuilt X12 under one job.</div>
       </div>
     </aside>
-    <main class="min-w-0">
-      <header class="topbar">
-        <div>
-          <div class="text-lg font-semibold">{{page.heading}}</div>
-          <div class="text-sm subtle">{{page.lead}}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <a href="/efuzy/workspace" class="btn-secondary">Workspace</a>
-          <button class="btn-secondary" id="themeToggle" type="button">Theme</button>
+    <main class="px-4 py-4 lg:px-6 lg:py-6">
+      <header class="panel rounded-[1.5rem] p-4 lg:p-5">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div class="max-w-3xl">
+            <div class="section-kicker">{{page.eyebrow}}</div>
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight lg:text-[2rem]">{{page.heading}}</h1>
+            <p class="mt-2 text-sm muted lg:text-[0.95rem]">{{page.lead}}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="/efuzy/workspace" class="quick-button">Workspace</a>
+            <a href="/efuzy/jobs" class="quick-button">Jobs</a>
+            <a href="/efuzy/profiles" class="quick-button">Profiles</a>
+            <button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
+          </div>
         </div>
       </header>
-      <div class="p-5">
+      <div class="mt-6">
         {{{content}}}
       </div>
     </main>
   </div>
   <script>
     (function () {
-      const root = document.documentElement;
-      const saved = localStorage.getItem('efuzy-theme');
-      if (saved) root.setAttribute('data-theme', saved);
-      const btn = document.getElementById('themeToggle');
+      var root = document.documentElement;
+      var key = 'efuzy-theme';
+      function setTheme(mode) {
+        root.setAttribute('data-theme', mode);
+        try { localStorage.setItem(key, mode); } catch (e) {}
+      }
+      var saved = null;
+      try { saved = localStorage.getItem(key); } catch (e) {}
+      if (!saved) {
+        saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      setTheme(saved);
+      var btn = document.getElementById('themeToggle');
       if (btn) {
         btn.addEventListener('click', function () {
-          const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-          root.setAttribute('data-theme', next);
-          localStorage.setItem('efuzy-theme', next);
+          setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
       }
-      const uploadForm = document.getElementById('efuzyUploadForm');
-      const uploadResult = document.getElementById('uploadResult');
-      if (uploadForm) {
-        uploadForm.addEventListener('submit', async function (e) {
-          e.preventDefault();
-          const fd = new FormData(uploadForm);
-          if (uploadResult) uploadResult.textContent = 'Uploading…';
-          const res = await fetch(uploadForm.action, { method: 'POST', body: fd });
-          const json = await res.json();
-          if (json.redirect) window.location.href = json.redirect;
-          if (uploadResult) uploadResult.textContent = json.ok ? 'Upload complete.' : (json.error || 'Upload failed');
+      var dropzones = document.querySelectorAll('[data-dropzone]');
+      dropzones.forEach(function (zone) {
+        var input = zone.querySelector('input[type="file"]');
+        if (!input) return;
+        ['dragenter', 'dragover'].forEach(function (evt) {
+          zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            zone.classList.add('is-dragover');
+          });
         });
-      }
-      const runForm = document.getElementById('efuzyRunForm');
-      if (runForm) {
-        runForm.addEventListener('submit', async function (e) {
-          e.preventDefault();
-          const body = new URLSearchParams(new FormData(runForm));
-          const res = await fetch(runForm.action, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-          const json = await res.json();
-          if (json.redirect) window.location.href = json.redirect;
-          alert(json.ok ? 'Job completed.' : (json.error || 'Run failed'));
+        ['dragleave', 'dragend', 'drop'].forEach(function (evt) {
+          zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            zone.classList.remove('is-dragover');
+          });
         });
-      }
+        zone.addEventListener('drop', function (e) {
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+          }
+        });
+        zone.addEventListener('click', function (e) {
+          if (e.target.tagName !== 'INPUT') input.click();
+        });
+      });
     }());
   </script>
 </body>
