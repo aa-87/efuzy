@@ -164,11 +164,16 @@ SUB(S,F,R)
  Q OUT
  ;
 ENSDIR(PATH,ERR)
- N CMD
+ N CMD,PROBE
  K ERR
  I $G(PATH)="" Q 1
- S CMD="mkdir -p "_$G(PATH)
+ S CMD="mkdir -p '"_$TR($G(PATH),"'","''")_"'"
  ZSY CMD
+ S PROBE=$G(PATH)_"/.efuzzy_probe"
+ O PROBE:(newversion:stream:nowrap:writeonly):1 E  D  Q 0
+ . S ERR("error")="mkdir_failed"
+ U PROBE W "ok" C PROBE
+ ZSY "rm -f '"_$TR(PROBE,"'","''")_"'"
  Q 1
  ;
 EOL() Q $C(13,10)

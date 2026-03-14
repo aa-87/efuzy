@@ -1,3 +1,0 @@
-claim_id,tx_kind,guide,tx_control,total_charge,from_date,thru_date,facility_code,claim_freq,claim_type,subscriber_name,subscriber_member_id,subscriber_dob,subscriber_sex,patient_name,patient_member_id,patient_dob,patient_sex,primary_payer_name,billing_provider_name,billing_provider_npi,attending_provider_name,attending_provider_id,diag_codes
-26463774,837P,005010X298,0021,100,,,11,1,,"SMITH, JANE",JS00111223333,19430501,F,,,,,,PHYSICIAN CLINIC,9876543210,,,M25375|M19072
-

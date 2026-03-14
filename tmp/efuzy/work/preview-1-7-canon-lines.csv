@@ -1,8 +1,0 @@
-claim_id,line_no,service_kind,revenue_code,procedure_qual,procedure_code,charge,uom,qty,svc_date
-CLMNO12345,1,SV1,,HC,S9500,1400.00,UN,7,
-CLMNO12345,2,SV1,,HC,J0696,682.50,UN,56,
-CLMNO12345,3,SV1,,HC,J7051,15.12,UN,28,
-CLMNO12345,4,SV1,,HC,J3490,67.69,UN,7,
-CLMNO12345,5,SV1,,HC,J3490,57.12,UN,14,
-CLMNO12345,6,SV1,,HC,J3490,10.50,UN,7,
-

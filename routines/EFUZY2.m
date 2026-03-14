@@ -30,7 +30,6 @@ REG(CONF)
 	;
 REG1(METHOD,PATH,TARGET,META)
 	D ADDM^MIOROUTE($G(METHOD),$G(PATH),$G(TARGET),.META)
-	S ^MIO("ROUTE","RAW",$G(METHOD),$G(PATH))=$G(TARGET)
 	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"authRequired")=+$G(META("authRequired"))
 	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"roles")=$G(META("roles"))
 	Q
@@ -48,6 +47,13 @@ PREVIEW(DEV,CONF,REQ,CTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_preview.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
+JOBS(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
 PROFILES(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
 	D BUILDPROFS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
@@ -104,13 +110,6 @@ APIRUN(DEV,CONF,REQ,CTX)
 	S OBJ("ok")=1,OBJ("jobId")=JOBID,OBJ("redirect")="/efuzy/preview/"_JOBID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
 	Q
-JOBS(DEV,CONF,REQ,CTX)
-	N TCTX,OUT,ERR
-	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
-	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
-	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
-	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
-	Q
 APIJOBS(DEV,CONF,REQ,CTX)
 	N OBJ D LISTJSON^EFUWFHIST(.CONF,.REQ,.OBJ) D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIJOB(DEV,CONF,REQ,CTX)
@@ -153,10 +152,11 @@ APIAUTOD(DEV,CONF,REQ,CTX)
 	;
 PARSEFORM(CONF,REQ,OUT)
 	N CT,BODY,MP,ERR,K
-	; Supports both call styles:
+	; Backward-compatible support for both call styles:
 	;   D PARSEFORM^EFUZY(.REQ,.OUT)
 	;   D PARSEFORM^EFUZY(.CONF,.REQ,.OUT)
-	I $D(CONF("body")),'$D(REQ("body")) D  Q
+	; In the 2-arg style, CONF is actually the request source and REQ is the output target.;
+	I '$D(OUT),$D(CONF("body")) D  Q
 	. K REQ
 	. S CT=$$LC($G(CONF("hdr","content-type")))
 	. S BODY=$G(CONF("body"))

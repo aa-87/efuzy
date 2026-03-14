@@ -1,3 +1,0 @@
-claim_id,total_charge,claim_date,subscriber_id,subscriber_last,subscriber_first,patient_last,patient_first,billing_provider_name,payer_name,service_line_count
-CLMNO12345,2232.93,,MBRID12345,Smith,Steve,Smith,Steve,"Professional Home IV, LLC",R&R Health Plan,6
-

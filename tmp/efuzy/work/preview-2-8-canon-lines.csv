@@ -1,6 +1,0 @@
-claim_id,line_no,service_kind,revenue_code,procedure_qual,procedure_code,charge,uom,qty,svc_date
-051068,1,SV1,,HC,A0427,700,UN,1,20050208
-051068,2,SV1,,HC,A0425,8.20,UN,21,20050208
-051068,3,SV1,,HC,A0422,46,UN,1,20050208
-051068,4,SV1,,HC,A0382,12.30,UN,1,20050208
-

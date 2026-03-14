@@ -13,6 +13,7 @@ MAKE(CONF,JOBID,PROFILEID,OUTPATH,ERR)
  S QMODE=$G(P("quoteMode")) I QMODE="" S QMODE="minimal"
  S HDRON=+$G(P("header"),1)
  S OUTPATH=$$OUTFILE(.CONF,JOBID,.P)
+ I '$$ENSDIR($P(OUTPATH,"/",1,$L(OUTPATH,"/")-1),.ERR) Q 0
  O OUTPATH:(newversion:stream:nowrap:writeonly):1 E  S ERR("error")="export_open_failed" Q 0
  S OLDIO=$IO U OUTPATH
  I HDRON W $$HDR(FIELDS,DELIM,QMODE)_$$EOL()
@@ -161,6 +162,19 @@ SUB(S,F,R)
  . S START=POS
  S OUT=OUT_$E($G(S),START,$L($G(S)))
  Q OUT
+ ;
+ENSDIR(PATH,ERR)
+ N CMD,PROBE
+ K ERR
+ I $G(PATH)="" Q 1
+ S CMD="mkdir -p '"_$TR($G(PATH),"'","''")_"'"
+ ZSY CMD
+ S PROBE=$G(PATH)_"/.efuzzy_probe"
+ O PROBE:(newversion:stream:nowrap:writeonly):1 E  D  Q 0
+ . S ERR("error")="mkdir_failed"
+ U PROBE W "ok" C PROBE
+ ZSY "rm -f '"_$TR(PROBE,"'","''")_"'"
+ Q 1
  ;
 EOL() Q $C(13,10)
  ;
