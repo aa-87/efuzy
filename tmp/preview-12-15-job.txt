@@ -1,0 +1,17 @@
+workflow=837_artifact_job
+status=failed
+error_code=parse_failed
+error_text=parse_failed
+input_path=.//uploads/15-commercial.dat
+workbase=./tmp/preview-12-15
+compare_mode=export_safe
+claims=
+lines=
+transactions=
+warnings=
+errors=
+artifacts=1
+artifact.input_raw.role=input
+artifact.input_raw.path=.//uploads/15-commercial.dat
+artifact.input_raw.type=edi
+

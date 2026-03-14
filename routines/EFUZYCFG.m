@@ -44,7 +44,7 @@ NEXTAUTO()
 	;
 SAVE(CONF,POST,ID,ERR)
 	D SEEDCHK
-	I $Q Q $$SAVEONE(.POST,.ID,.ERR)
+	Q:$Q $$SAVEONE(.POST,.ID,.ERR)
 	D SAVEONE(.POST,.ID,.ERR)
 	Q
 	;
@@ -174,7 +174,7 @@ SAVEAUTO(CONF,POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","auto",ID,"onSuccess")=$S($G(POST("onSuccess"))'="":$G(POST("onSuccess")),1:"archive")
 	S ^MIO("EFUZY","cfg","auto",ID,"onFailure")=$S($G(POST("onFailure"))'="":$G(POST("onFailure")),1:"error")
 	S ^MIO("EFUZY","cfg","auto",ID,"overwriteMode")=$S($G(POST("overwriteMode"))'="":$G(POST("overwriteMode")),1:"skip")
-	S ^MIO("EFUZY","cfg","auto",ID,"namingRule")=$S($G(POST("namingRule"))'="":$G(POST("namingRule")),1:"{{source_base}}-{{job_id}}.csv")
+	S ^MIO("EFUZY","cfg","auto",ID,"namingRule")=$S($G(POST("namingRule"))'="":$G(POST("namingRule")),1:"{{source_base}}-{{timestamp}}.csv")
 	S ^MIO("EFUZY","cfg","auto",ID,"updatedAt")=NOW
 	I '$D(^MIO("EFUZY","cfg","auto",ID,"createdAt")) S ^MIO("EFUZY","cfg","auto",ID,"createdAt")=NOW
 	Q:$QUIT 1 Q

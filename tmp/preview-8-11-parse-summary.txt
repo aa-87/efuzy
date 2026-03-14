@@ -1,0 +1,12 @@
+workflow=837_artifact_job
+status=running
+input_path=.//uploads/11-837P-X298-all-fields.dat
+claims=1
+lines=1
+transactions=1
+segments=49
+warnings=1
+errors=0
+tx_kind=837P
+guide=005010X298
+

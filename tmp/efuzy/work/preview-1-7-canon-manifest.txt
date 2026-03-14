@@ -1,0 +1,15 @@
+schema_name=EFU837_CANONICAL
+schema_version=1
+schema_semver=1.0.0
+package_kind=canonical_csv
+claims_path=tmp/efuzy/work/preview-1-7-canon-claims.csv
+lines_path=tmp/efuzy/work/preview-1-7-canon-lines.csv
+claims=1
+lines=6
+tx_kinds=
+guides=
+source_path=tmp/efuzy/uploads/7-X222-home-infusion-therapy-pharmacy-_adjudicated-with-HCPCS-in-loop-2400-or-NDC-in-loop-2410_.edi
+engine=EFU837
+version=0.2.1
+created_h=67643,44787
+

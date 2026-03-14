@@ -1,0 +1,15 @@
+schema_name=EFU837_CANONICAL
+schema_version=1
+schema_semver=1.0.0
+package_kind=canonical_csv
+claims_path=./tmp/preview-8-11-canon-claims.csv
+lines_path=./tmp/preview-8-11-canon-lines.csv
+claims=1
+lines=1
+tx_kinds=
+guides=
+source_path=.//uploads/11-837P-X298-all-fields.dat
+engine=EFU837
+version=0.2.1
+created_h=67643,43206
+

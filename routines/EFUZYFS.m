@@ -5,7 +5,7 @@ EFUZYFS ; efuzy filesystem helpers
 ROOT(CONF)
 	N R
 	S R=$G(CONF("efuzy","rootDir"))
-	I R="" S R="./"
+	I R="" S R="tmp/efuzy"
 	Q R
 	;
 UPLOADDIR(CONF)

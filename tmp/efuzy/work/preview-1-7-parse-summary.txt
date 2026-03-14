@@ -1,0 +1,12 @@
+workflow=837_artifact_job
+status=running
+input_path=tmp/efuzy/uploads/7-X222-home-infusion-therapy-pharmacy-_adjudicated-with-HCPCS-in-loop-2400-or-NDC-in-loop-2410_.edi
+claims=1
+lines=6
+transactions=1
+segments=69
+warnings=0
+errors=0
+tx_kind=837P
+guide=005010X222A1
+

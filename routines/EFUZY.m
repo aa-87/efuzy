@@ -11,8 +11,9 @@ REG(CONF)
 	D REG1("GET","/efuzy/profiles","PROFILES^EFUZY",.META)
 	D REG1("GET","/efuzy/profiles/:id","PROFILE^EFUZY",.META)
 	D REG1("GET","/efuzy/automation","AUTOMATION^EFUZY",.META)
-	D ADDM^MIOROUTE("GET","/efuzy/jobs","JOBS^EFUZY",.META)
+	D REG1("GET","/efuzy/jobs","JOBS^EFUZY",.META)
 	D REG1("GET","/efuzy/jobs/:id","JOBPAGE^EFUZY",.META)
+	D REG1("GET","/efuzy/download/:jobId/:artifactKey","DOWNLOAD^EFUZY",.META)
 	K META S META("authRequired")=0,META("roles")="operator,admin"
 	D REG1("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
 	D REG1("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
@@ -46,6 +47,13 @@ PREVIEW(DEV,CONF,REQ,CTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_preview.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
+JOBS(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
 PROFILES(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
 	D BUILDPROFS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
@@ -70,13 +78,14 @@ JOBPAGE(DEV,CONF,REQ,CTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_job_detail.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
-JOBS(DEV,CONF,REQ,CTX)
-	N TCTX,OUT,ERR
-	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
-	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
-	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
-	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	;
+DOWNLOAD(DEV,CONF,REQ,CTX)
+	N JOBID,ARTKEY,ERR
+	S JOBID=$G(REQ("params","jobId"))
+	S ARTKEY=$G(REQ("params","artifactKey"))
+	I '$$SENDART(.DEV,.CONF,JOBID,ARTKEY,.CTX,.ERR) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"artifact_not_found"))
 	Q
+	;
 APIUPLOAD(DEV,CONF,REQ,CTX)
 	N MP,ERR,FILEID,JOBID,OBJ,PROFILEID
 	I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"multipart_parse_failed")) Q
@@ -214,10 +223,57 @@ RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
 	N OBJ S OBJ("ok")=0,OBJ("error")=$G(ERRTXT)
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX) Q
 	;
+SENDART(DEV,CONF,JOBID,ARTKEY,CTX,ERR)
+	N PATH,NAME,TYPE,HEAD,KEY
+	K ERR
+	S JOBID=+JOBID
+	I 'JOBID S ERR("error")="job_id_required" Q 0
+	S KEY=$$SAFEKEY($G(ARTKEY))
+	I KEY="" S KEY=$$DEFART(JOBID)
+	I KEY'="",$D(^MIO("EFUZY","job",JOBID,"artifact",KEY)) D
+	. S PATH=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"path"))
+	. S TYPE=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"type"))
+	. S NAME=$G(^MIO("EFUZY","job",JOBID,"artifact",KEY,"name"))
+	E  D
+	. S PATH=$G(^MIO("EFUZY","job",JOBID,"outputPath"))
+	. S NAME=$G(^MIO("EFUZY","job",JOBID,"outputName"))
+	. S TYPE="csv"
+	I PATH="" S ERR("error")="artifact_not_found" Q 0
+	I NAME="" S NAME=$$SAFEKEY($S(KEY'="":KEY,1:"download"))
+	S HEAD("Content-Type")=$$MIME(TYPE,PATH)
+	S HEAD("Content-Disposition")="attachment; filename="""_NAME_""""
+	Q $$SENDFILE^MIOHTTP(.DEV,.CONF,PATH,.HEAD,$G(CTX("request_id")),.CTX,"GET")
+	;
+DEFART(JOBID)
+	I $D(^MIO("EFUZY","job",+JOBID,"artifact","profile_export")) Q "profile_export"
+	I $D(^MIO("EFUZY","job",+JOBID,"artifact","canonical_claims")) Q "canonical_claims"
+	I $D(^MIO("EFUZY","job",+JOBID,"artifact","canonical_lines")) Q "canonical_lines"
+	I $D(^MIO("EFUZY","job",+JOBID,"artifact","rebuilt_x12")) Q "rebuilt_x12"
+	Q ""
+	;
+SAFEKEY(X)
+	N I,C,O
+	S O=""
+	F I=1:1:$L($G(X)) S C=$E(X,I) D
+	. I C?1AN S O=O_C Q
+	. I "-_.,"[C S O=O_C Q
+	Q O
+	;
+MIME(TYPE,PATH)
+	N T
+	S T=$ZCONVERT($G(TYPE),"L")
+	I T="csv" Q "text/csv; charset=utf-8"
+	I T="text" Q "text/plain; charset=utf-8"
+	I T="edi" Q "application/edi-x12"
+	I T="json" Q "application/json"
+	I $E($G(PATH),$L($G(PATH))-3,$L($G(PATH)))=".csv" Q "text/csv; charset=utf-8"
+	I $E($G(PATH),$L($G(PATH))-3,$L($G(PATH)))=".txt" Q "text/plain; charset=utf-8"
+	Q "application/octet-stream"
+	;
 WORKBASE(CONF,JOBID,FILEID,MODE)
 	N ROOT
 	S ROOT=$$ROOT^EFUZYFS(.CONF)
-	Q ROOT_"tmp/"_$G(MODE)_"-"_$G(JOBID)_"-"_$G(FILEID)
+	Q ROOT_"/work/"_$G(MODE)_"-"_$G(JOBID)_"-"_$G(FILEID)
 	;
 GetRoutineList(routine,result)
 	N %ZR K result,%ZR
