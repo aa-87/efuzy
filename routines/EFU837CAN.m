@@ -25,7 +25,7 @@ EXPORT(ROOT,OUTBASE,RES) ; export canonical claims + lines CSV files + manifest
 	I '+$G(NOK("ok")) S RES("error")="norm_failed" M RES("norm")=NOK Q
 	S CPATH=OUTBASE_"-claims.csv",LPATH=OUTBASE_"-lines.csv",MPATH=OUTBASE_"-manifest.txt"
 	S OLDIO=$IO
-	O CPATH:(NEWVERSION:STREAM:WRITEONLY):1
+	O CPATH:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
 	I '$T S RES("error")="open_claims_failed" U OLDIO Q
 	U CPATH
 	D CLAIMHDR(.RC)
@@ -36,7 +36,7 @@ EXPORT(ROOT,OUTBASE,RES) ; export canonical claims + lines CSV files + manifest
 	. D WRROW(.RC)
 	C CPATH
 	U OLDIO
-	O LPATH:(NEWVERSION:STREAM:WRITEONLY):1
+	O LPATH:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
 	I '$T S RES("error")="open_lines_failed" U OLDIO Q
 	U LPATH
 	D LINEHDR(.RL)
@@ -189,7 +189,7 @@ WRMAN(ROOT,OUTBASE,PATH,RES) ; write additive manifest package file
 	K RES
 	S RES("ok")=0,DEV=PATH,OLDIO=$IO
 	D COUNTS(ROOT,.CNTCLM,.CNTLIN,.TXS,.GDS)
-	O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+	O DEV:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
 	I '$T S RES("error")="open_manifest_failed" Q
 	U DEV
 	D WKV("schema_name",$$SCHEMA())
@@ -284,7 +284,7 @@ ADDSET(LST,VAL) ; append unique pipe-delimited set value
 	Q $G(LST)_"|"_$G(VAL)
 	;
 WKV(KEY,VAL) ; write key=value manifest line to current device
-	W $G(KEY),"=",$G(VAL),!
+	W $G(KEY),"=",$G(VAL),$$NL()
 	Q
 	;
 PARSEKV(LINE,KEY,VAL) ; parse simple manifest key=value line
@@ -424,8 +424,11 @@ WRROW(ROW) ; write one CSV row to current device
 	F I=1:1:MAX D
 	. I I>1 S OUT=OUT_","
 	. S OUT=OUT_$$CSVESC^EFU837U($G(ROW(I)))
-	W OUT,!
+	W OUT,$$NL()
 	Q
+	;
+NL() ; explicit newline for stream files
+	Q $C(10)
 	;
 SCHEMA() Q "EFU837_CANONICAL"
 SCHEMAV() Q 1

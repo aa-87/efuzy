@@ -63,7 +63,7 @@ SAFEFN(FN)
 LOADFILES(CONF,LIMIT,TCTX)
 	N ID,N
 	S N=0,ID=""
-	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:ID=""!(N>=+$G(LIMIT))  D
+	F  S ID=$O(^MIO("EFUZY","file",ID),-1) Q:'ID!(N>=+$G(LIMIT))  D
 	. S N=N+1
 	. S TCTX("files",N,"id")=ID
 	. S TCTX("files",N,"name")=$G(^MIO("EFUZY","file",ID,"name"))

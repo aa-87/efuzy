@@ -18,7 +18,7 @@ REG(CONF)
 	;
 	; Operator/admin pages
 	K META
-	S META("authRequired")=0,META("roles")="operator,admin"
+	S META("authRequired")=1,META("roles")="operator,admin"
 	D ADDM^MIOROUTE("GET","/efuzy","HOME^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
@@ -31,7 +31,7 @@ REG(CONF)
 	;
 	; Operator/admin APIs
 	K META
-	S META("authRequired")=0,META("roles")="operator,admin"
+	S META("authRequired")=1,META("roles")="operator,admin"
 	D ADDM^MIOROUTE("POST","/efuzy/api/upload","APIUPLOAD^EFUZY",.META)
 	D ADDM^MIOROUTE("POST","/efuzy/api/run","APIRUN^EFUZY",.META)
 	D ADDM^MIOROUTE("GET","/efuzy/api/jobs","APIJOBS^EFUZY",.META)
@@ -135,8 +135,8 @@ APIUPLOAD(DEV,CONF,REQ,CTX)
 	;
 APIRUN(DEV,CONF,REQ,CTX)
 	N POST,JOBID,ERR,OBJ,PROFILEID,FILEID,INPATH,WORKBASE,OPT,RES,JROOT,STATUS,WF
-	D PARSEFORM(.REQ,.POST)
-	S JOBID=+$G(POST("jobId"))
+	D PARSEFORM(.CONF,.REQ,.POST)
+	S JOBID=+$G(POST("jobId")) M ^AHM=POST
 	S PROFILEID=$G(POST("profileId"))
 	I 'JOBID D RESPERR(.DEV,.CONF,.CTX,400,"job_id_required") Q
 	S FILEID=+$G(^MIO("EFUZY","job",JOBID,"fileId"))
@@ -150,14 +150,63 @@ APIRUN(DEV,CONF,REQ,CTX)
 	S OPT("build_rebuilt")=$$BOOL($G(POST("build_rebuilt")),1)
 	S OPT("roundtrip")=$$BOOL($G(POST("roundtrip")),0)
 	S OPT("compare_mode")=$S($G(POST("compareMode"))'="":$G(POST("compareMode")),1:"export_safe")
+	S ^MIO("EFUZY","job",JOBID,"inputPath")=INPATH
+	S ^MIO("EFUZY","job",JOBID,"compareMode")=$G(OPT("compare_mode"))
+	S ^MIO("EFUZY","job",JOBID,"build_rebuilt")=+$G(OPT("build_rebuilt"))
+	S ^MIO("EFUZY","job",JOBID,"roundtrip")=+$G(OPT("roundtrip"))
+	S ^MIO("EFUZY","job",JOBID,"trace")=+$G(OPT("trace"))
 	S WORKBASE=$$WORKBASE(.CONF,JOBID,FILEID,"run")
 	S JROOT=$NA(^TMP($J,"EFUZY","run",JOBID,$H))
-	D RUN837^EFUX12JOB(INPATH,WORKBASE,JROOT,.OPT,.RES)
-	I '+$G(RES("ok")) D  Q
-	. S STATUS=$S($G(RES("status"))="failed":422,1:500)
-	. D RESPERR(.DEV,.CONF,.CTX,STATUS,$S($G(@JROOT@("meta","error_code"))'="":$G(@JROOT@("meta","error_code")),1:"run_failed"))
+	I '$$RUNJOB(.CONF,JOBID,INPATH,WORKBASE,JROOT,.OPT,.RES,.ERR) D  Q
+	. S STATUS=$S(+$G(ERR("http_status"))>0:+$G(ERR("http_status")),$G(RES("status"))="failed":422,1:500)
+	. D RESPERR(.DEV,.CONF,.CTX,STATUS,$S($G(ERR("error"))'="":$G(ERR("error")),1:"run_failed"))
 	S OBJ("ok")=1,OBJ("jobId")=JOBID,OBJ("redirect")="/efuzy/preview/"_JOBID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
+	Q
+	;
+RUNJOB(CONF,JOBID,INPATH,WORKBASE,JROOT,OPT,RES,ERR)
+	N LERR,ECODE,ETXT
+	K ERR
+	D RUN837^EFUX12JOB(INPATH,WORKBASE,JROOT,.OPT,.RES)
+	I +$G(RES("ok")) Q 1
+	S ECODE=$G(@JROOT@("meta","error_code"))
+	S ETXT=$G(@JROOT@("meta","error_text"))
+	I ECODE="" S ECODE=$S($G(RES("error"))'="":$G(RES("error")),1:"run_failed")
+	I ETXT="" S ETXT=ECODE
+	S ERR("error")=ETXT
+	S ERR("http_status")=$S($G(RES("status"))="failed":422,1:500)
+	I ECODE'="parse_failed" Q 0
+	I '$$RUN^EFUWFRUN(.CONF,JOBID,.LERR) D  Q 0
+	. S ERR("error")=$S($G(LERR("error"))'="":$G(LERR("error")),1:ETXT)
+	. S ERR("http_status")=422
+	D LEGSYNC(JOBID)
+	S RES("ok")=1
+	S RES("status")="completed"
+	S RES("fallback")="legacy_workflow"
+	Q 1
+	;
+LEGSYNC(JOBID)
+	N PATH,NAME,N
+	S PATH=$G(^MIO("EFUZY","job",JOBID,"outputPath"))
+	S NAME=$G(^MIO("EFUZY","job",JOBID,"outputName"))
+	S ^MIO("EFUZY","job",JOBID,"compat","parser")="legacy_workflow"
+	S ^MIO("EFUZY","job",JOBID,"stats","claims")=+$G(^MIO("EFUZY","job",JOBID,"stats","claims"),+$G(^MIO("EFUZY","job",JOBID,"stats","claimCount")))
+	S ^MIO("EFUZY","job",JOBID,"stats","lines")=+$G(^MIO("EFUZY","job",JOBID,"stats","lines"),+$G(^MIO("EFUZY","job",JOBID,"stats","serviceLineCount")))
+	S ^MIO("EFUZY","job",JOBID,"stats","segments")=+$G(^MIO("EFUZY","job",JOBID,"stats","segments"),+$G(^MIO("EFUZY","job",JOBID,"stats","segmentCount")))
+	I PATH="" Q
+	I NAME="" S NAME=$P(PATH,"/",$L(PATH,"/"))
+	S N=+$G(^MIO("EFUZY","job",JOBID,"artifact_last"))
+	I '$D(^MIO("EFUZY","job",JOBID,"artifact","profile_export")) S N=N+1
+	S ^MIO("EFUZY","job",JOBID,"artifact_last")=N
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","id")=N
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","key")="profile_export"
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","role")="profile"
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","path")=PATH
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","type")="csv"
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","name")=NAME
+	S ^MIO("EFUZY","job",JOBID,"artifact","profile_export","exists")=1
+	S ^MIO("EFUZY","job",JOBID,"artifact_by_id",N)="profile_export"
+	S ^MIO("EFUZY","job",JOBID,"artifact_by_role","profile","profile_export")=""
 	Q
 	;
 APIJOBS(DEV,CONF,REQ,CTX)
@@ -197,7 +246,7 @@ APIEXPORT(DEV,CONF,REQ,CTX)
 	;
 APIRETRY(DEV,CONF,REQ,CTX)
 	N POST,JOBID,NEWID,ERR,OBJ
-	D PARSEFORM(.REQ,.POST)
+	D PARSEFORM(.CONF,.REQ,.POST)
 	S JOBID=$G(POST("jobId"))
 	I JOBID="" D RESPERR(.DEV,.CONF,.CTX,400,"job_id_required") Q
 	I '$$RETRY^EFUZYJOB(.CONF,JOBID,.NEWID,.ERR) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"retry_failed")) Q
@@ -207,7 +256,7 @@ APIRETRY(DEV,CONF,REQ,CTX)
 	;
 APIPROFS(DEV,CONF,REQ,CTX)
 	N POST,ID,ERR,OBJ
-	D PARSEFORM(.REQ,.POST)
+	D PARSEFORM(.CONF,.REQ,.POST)
 	I '$$SAVE^EFUZYCFG(.CONF,.POST,.ID,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_save_failed")) Q
 	S OBJ("ok")=1,OBJ("id")=ID,OBJ("redirect")="/efuzy/profiles/"_ID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
@@ -215,7 +264,7 @@ APIPROFS(DEV,CONF,REQ,CTX)
 	;
 APIPROFD(DEV,CONF,REQ,CTX)
 	N POST,ERR,OBJ
-	D PARSEFORM(.REQ,.POST)
+	D PARSEFORM(.CONF,.REQ,.POST)
 	I '$$DELPROF^EFUZYCFG(.CONF,$G(POST("id")),.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_delete_failed")) Q
 	S OBJ("ok")=1,OBJ("redirect")="/efuzy/profiles"
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
@@ -223,7 +272,7 @@ APIPROFD(DEV,CONF,REQ,CTX)
 	;
 APIAUTOS(DEV,CONF,REQ,CTX)
 	N POST,ID,ERR,OBJ
-	D PARSEFORM(.REQ,.POST)
+	D PARSEFORM(.CONF,.REQ,.POST)
 	I '$$SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_save_failed")) Q
 	S OBJ("ok")=1,OBJ("id")=ID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
@@ -231,7 +280,7 @@ APIAUTOS(DEV,CONF,REQ,CTX)
 	;
 APIAUTOD(DEV,CONF,REQ,CTX)
 	N POST,ERR,OBJ
-	D PARSEFORM(.REQ,.POST)
+	D PARSEFORM(.CONF,.REQ,.POST)
 	I '$$DELAUTO^EFUZYCFG(.CONF,$G(POST("id")),.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_delete_failed")) Q
 	S OBJ("ok")=1
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
@@ -302,9 +351,17 @@ BOOL(VAL,DEF)
 	I $ZCONVERT($G(VAL),"L")="off" Q 0
 	Q 1
 	;
-PARSEFORM(REQ,OUT)
+PARSEFORM(CONF,REQ,OUT)
+	N CT,MP,ERR,NAME
 	K OUT
-	I $T(DECODEFORM^MIOFNC)'="" D DECODEFORM^MIOFNC($G(REQ("body")),.OUT) Q
+	S CT=$ZCONVERT($G(REQ("hdr","content-type")),"L")
+	I CT["multipart/form-data",$T(PARSE^MIOHTTPMPU)'="" D  Q
+	. I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) S OUT("raw")=$G(REQ("body")) Q
+	. S NAME=""
+	. F  S NAME=$O(MP("field",NAME)) Q:NAME=""  S OUT(NAME)=$G(MP("field",NAME))
+	. D FREE^MIOHTTPMPU(.MP)
+	I $T(DECODEFORM^MIOFNC)'="" D  Q
+	. D DECODEFORM^MIOFNC($G(REQ("body")),.OUT)
 	S OUT("raw")=$G(REQ("body"))
 	Q
 	;
@@ -320,5 +377,6 @@ RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
 	S OBJ("error")=$G(ERRTXT)
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX)
 	Q
+	;
 	;
 	;

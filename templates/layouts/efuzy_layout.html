@@ -192,6 +192,111 @@
           setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
       }
+
+      var apiForms = document.querySelectorAll('[data-api-form]');
+      apiForms.forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var body = new FormData(form);
+          fetch(form.action, { method: form.method || 'POST', body: body, headers: { 'Accept': 'application/json' } })
+            .then(function (res) { return res.json().catch(function(){ return { ok:false, error:'invalid_json' }; }); })
+            .then(function (data) {
+              if (data && data.ok && data.redirect) { window.location.href = data.redirect; return; }
+              if (data && data.ok) { window.location.reload(); return; }
+              alert((data && data.error) ? data.error : 'Request failed');
+            })
+            .catch(function () { alert('Request failed'); });
+        });
+      });
+      var editors = document.querySelectorAll('[data-profile-editor]');
+      editors.forEach(function (editor) {
+        var selectedInput = editor.querySelector('input[name="selectedFields"]');
+        var orderInput = editor.querySelector('input[name="fieldOrder"]');
+        var namingInput = editor.querySelector('input[name="outputNamingRule"]');
+        var preview = editor.querySelector('[data-naming-preview]');
+        var sourceBase = editor.getAttribute('data-source-base') || 'sample-837';
+        var selectedList = editor.querySelector('[data-selected-columns]');
+        function tokens(str) {
+          return (str || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
+        function renderSelected() {
+          var current = tokens(orderInput.value).filter(function (name) {
+            return tokens(selectedInput.value).indexOf(name) >= 0;
+          });
+          orderInput.value = current.join(',');
+          if (!selectedList) return;
+          selectedList.innerHTML = '';
+          current.forEach(function (name, idx) {
+            var row = document.createElement('div');
+            row.className = 'flex items-center justify-between gap-3 rounded-2xl border border-slate-500/10 px-3 py-2';
+            row.innerHTML = '<div><div class="font-medium text-sm">' + name + '</div><div class="text-xs muted">Column #' + (idx + 1) + '</div></div>' +
+              '<div class="flex gap-2">' +
+              '<button type="button" class="quick-button" data-move="up" data-name="' + name + '">↑</button>' +
+              '<button type="button" class="quick-button" data-move="down" data-name="' + name + '">↓</button>' +
+              '<button type="button" class="quick-button" data-remove="1" data-name="' + name + '">Remove</button>' +
+              '</div>';
+            selectedList.appendChild(row);
+          });
+          editor.querySelectorAll('[data-field-check]').forEach(function (box) {
+            var pos = current.indexOf(box.value);
+            var card = box.closest('[data-field-card]');
+            var badge = card ? card.querySelector('[data-order-text]') : null;
+            if (badge) badge.textContent = pos >= 0 ? ('#' + (pos + 1)) : 'Not selected';
+          });
+        }
+        function syncSelectionFromChecks() {
+          var picks = [];
+          editor.querySelectorAll('[data-field-check]:checked').forEach(function (box) { picks.push(box.value); });
+          selectedInput.value = picks.join(',');
+          var order = tokens(orderInput.value).filter(function (name) { return picks.indexOf(name) >= 0; });
+          picks.forEach(function (name) { if (order.indexOf(name) < 0) order.push(name); });
+          orderInput.value = order.join(',');
+          renderSelected();
+        }
+        editor.querySelectorAll('[data-field-check]').forEach(function (box) {
+          box.addEventListener('change', syncSelectionFromChecks);
+        });
+        editor.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-move],[data-remove],[data-select-all],[data-clear-all]');
+          if (!btn) return;
+          if (btn.hasAttribute('data-select-all')) {
+            editor.querySelectorAll('[data-field-check]').forEach(function (box) { box.checked = true; });
+            syncSelectionFromChecks();
+            return;
+          }
+          if (btn.hasAttribute('data-clear-all')) {
+            editor.querySelectorAll('[data-field-check]').forEach(function (box) { box.checked = false; });
+            syncSelectionFromChecks();
+            return;
+          }
+          var order = tokens(orderInput.value), name = btn.getAttribute('data-name'), i = order.indexOf(name);
+          if (btn.hasAttribute('data-remove')) {
+            editor.querySelectorAll('[data-field-check]').forEach(function (box) { if (box.value === name) box.checked = false; });
+            syncSelectionFromChecks();
+            return;
+          }
+          if (i < 0) return;
+          if (btn.getAttribute('data-move') === 'up' && i > 0) {
+            var tmp = order[i - 1]; order[i - 1] = order[i]; order[i] = tmp;
+          }
+          if (btn.getAttribute('data-move') === 'down' && i < order.length - 1) {
+            var tmp2 = order[i + 1]; order[i + 1] = order[i]; order[i] = tmp2;
+          }
+          orderInput.value = order.join(',');
+          renderSelected();
+        });
+        function updateNamePreview() {
+          if (!preview || !namingInput) return;
+          var txt = namingInput.value || '{{source_base}}-claim-summary.csv';
+          txt = txt.replace(/\{\{/g, '').replace(/\}\}/g, '');
+          txt = txt.replace(/source_base/g, sourceBase).replace(/mode/g, 'preview').replace(/job_id/g, 'preview').replace(/timestamp/g, 'preview');
+          preview.textContent = txt;
+        }
+        if (namingInput) namingInput.addEventListener('input', updateNamePreview);
+        updateNamePreview();
+        renderSelected();
+      });
+
       var dropzones = document.querySelectorAll('[data-dropzone]');
       dropzones.forEach(function (zone) {
         var input = zone.querySelector('input[type="file"]');

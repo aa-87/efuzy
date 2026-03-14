@@ -206,98 +206,96 @@ DOCOMP(PROOT,BROOT,MODE,OPT,CRES) ; compare wrapper with backward compatibility
 WRPSUM(PATH,JOBROOT) ; write parse summary report file
  N DEV,OLDIO,OK
  S OK=0,DEV=PATH,OLDIO=$IO
- O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+ O DEV:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
  I '$T Q 0
  U DEV
- W "workflow="_$G(@JOBROOT@("meta","workflow")),!
- W "status="_$G(@JOBROOT@("meta","status")),!
- W "input_path="_$G(@JOBROOT@("meta","input_path")),!
- W "claims="_$G(@JOBROOT@("summary","claims")),!
- W "lines="_$G(@JOBROOT@("summary","lines")),!
- W "transactions="_$G(@JOBROOT@("summary","transactions")),!
- W "segments="_$G(@JOBROOT@("summary","segments")),!
- W "warnings="_$G(@JOBROOT@("summary","warnings")),!
- W "errors="_$G(@JOBROOT@("summary","errors")),!
- W "tx_kind="_$G(@JOBROOT@("summary","tx_kind")),!
- W "guide="_$G(@JOBROOT@("summary","guide")),!
+ W "workflow="_$G(@JOBROOT@("meta","workflow")),$$NL()
+ W "status="_$G(@JOBROOT@("meta","status")),$$NL()
+ W "input_path="_$G(@JOBROOT@("meta","input_path")),$$NL()
+ W "claims="_$G(@JOBROOT@("summary","claims")),$$NL()
+ W "lines="_$G(@JOBROOT@("summary","lines")),$$NL()
+ W "transactions="_$G(@JOBROOT@("summary","transactions")),$$NL()
+ W "segments="_$G(@JOBROOT@("summary","segments")),$$NL()
+ W "warnings="_$G(@JOBROOT@("summary","warnings")),$$NL()
+ W "errors="_$G(@JOBROOT@("summary","errors")),$$NL()
+ W "tx_kind="_$G(@JOBROOT@("summary","tx_kind")),$$NL()
+ W "guide="_$G(@JOBROOT@("summary","guide")),$$NL()
  C DEV U OLDIO
  Q 1
  ;
 WRRT(PATH,CRES) ; write round-trip comparison summary report
  N DEV,OLDIO
  S DEV=PATH,OLDIO=$IO
- O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+ O DEV:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
  I '$T Q 0
  U DEV
- W "compare_mode="_$G(CRES("compare_mode"),$G(CRES("summary","mode"))),!
- W "ok="_+$G(CRES("ok")),!
- W "mismatch_count="_+$G(CRES("summary","mismatch_count")),!
- W "missing_count="_+$G(CRES("summary","missing_count")),!
- W "claim_compared="_+$G(CRES("summary","claim_compared")),!
- W "line_compared="_+$G(CRES("summary","line_compared")),!
+ W "compare_mode="_$G(CRES("compare_mode"),$G(CRES("summary","mode"))),$$NL()
+ W "ok="_+$G(CRES("ok")),$$NL()
+ W "mismatch_count="_+$G(CRES("summary","mismatch_count")),$$NL()
+ W "missing_count="_+$G(CRES("summary","missing_count")),$$NL()
+ W "claim_compared="_+$G(CRES("summary","claim_compared")),$$NL()
+ W "line_compared="_+$G(CRES("summary","line_compared")),$$NL()
  C DEV U OLDIO
  Q 1
  ;
 WRTRACE(PATH,JOBROOT) ; write compact trace summary/report
  N DEV,OLDIO,CN,LN,F
  S DEV=PATH,OLDIO=$IO
- O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+ O DEV:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
  I '$T Q 0
  U DEV
- W "trace_fields="_+$G(@JOBROOT@("summary","trace_fields")),!
- W "trace_segments="_+$G(@JOBROOT@("summary","trace_segments")),!
+ W "trace_fields="_+$G(@JOBROOT@("summary","trace_fields")),$$NL()
+ W "trace_segments="_+$G(@JOBROOT@("summary","trace_segments")),$$NL()
  S CN=0
  F  S CN=$O(@JOBROOT@("trace","claim",CN)) Q:'CN  D
  . S F=""
  . F  S F=$O(@JOBROOT@("trace","claim",CN,"field",F)) Q:F=""  D
- . . W "claim."_CN_"."_F_".segid="_$G(@JOBROOT@("trace","claim",CN,"field",F,"segid")),!
- . . W "claim."_CN_"."_F_".segno="_+$G(@JOBROOT@("trace","claim",CN,"field",F,"segno")),!
- . . W "claim."_CN_"."_F_".node="_$G(@JOBROOT@("trace","claim",CN,"field",F,"node")),!
+ . . W "claim."_CN_"."_F_".segid="_$G(@JOBROOT@("trace","claim",CN,"field",F,"segid")),$$NL()
+ . . W "claim."_CN_"."_F_".segno="_+$G(@JOBROOT@("trace","claim",CN,"field",F,"segno")),$$NL()
+ . . W "claim."_CN_"."_F_".node="_$G(@JOBROOT@("trace","claim",CN,"field",F,"node")),$$NL()
  S LN=0
  F  S LN=$O(@JOBROOT@("trace","line",LN)) Q:'LN  D
  . S F=""
  . F  S F=$O(@JOBROOT@("trace","line",LN,"field",F)) Q:F=""  D
- . . W "line."_LN_"."_F_".segid="_$G(@JOBROOT@("trace","line",LN,"field",F,"segid")),!
- . . W "line."_LN_"."_F_".segno="_+$G(@JOBROOT@("trace","line",LN,"field",F,"segno")),!
- . . W "line."_LN_"."_F_".node="_$G(@JOBROOT@("trace","line",LN,"field",F,"node")),!
+ . . W "line."_LN_"."_F_".segid="_$G(@JOBROOT@("trace","line",LN,"field",F,"segid")),$$NL()
+ . . W "line."_LN_"."_F_".segno="_+$G(@JOBROOT@("trace","line",LN,"field",F,"segno")),$$NL()
+ . . W "line."_LN_"."_F_".node="_$G(@JOBROOT@("trace","line",LN,"field",F,"node")),$$NL()
  C DEV U OLDIO
  Q 1
  ;
 WRJOB(PATH,JOBROOT,RES) ; write top-level job manifest/report
  N DEV,OLDIO,N,KEY
  S DEV=PATH,OLDIO=$IO
- O DEV:(NEWVERSION:STREAM:WRITEONLY):1
+ O DEV:(NEWVERSION:STREAM:NOWRAP:WRITEONLY):1
  I '$T Q 0
  U DEV
- W "workflow="_$G(@JOBROOT@("meta","workflow")),!
- W "status="_$G(@JOBROOT@("meta","status")),!
- W "error_code="_$G(@JOBROOT@("meta","error_code")),!
- W "error_text="_$G(@JOBROOT@("meta","error_text")),!
- W "input_path="_$G(@JOBROOT@("meta","input_path")),!
- W "workbase="_$G(@JOBROOT@("meta","workbase")),!
- W "compare_mode="_$G(@JOBROOT@("meta","compare_mode")),!
- W "claims="_$G(@JOBROOT@("summary","claims")),!
- W "lines="_$G(@JOBROOT@("summary","lines")),!
- W "transactions="_$G(@JOBROOT@("summary","transactions")),!
- W "warnings="_$G(@JOBROOT@("summary","warnings")),!
- W "errors="_$G(@JOBROOT@("summary","errors")),!
- W "artifacts="_+$G(@JOBROOT@("artifact_last")),!
+ W "workflow="_$G(@JOBROOT@("meta","workflow")),$$NL()
+ W "status="_$G(@JOBROOT@("meta","status")),$$NL()
+ W "error_code="_$G(@JOBROOT@("meta","error_code")),$$NL()
+ W "error_text="_$G(@JOBROOT@("meta","error_text")),$$NL()
+ W "input_path="_$G(@JOBROOT@("meta","input_path")),$$NL()
+ W "workbase="_$G(@JOBROOT@("meta","workbase")),$$NL()
+ W "compare_mode="_$G(@JOBROOT@("meta","compare_mode")),$$NL()
+ W "claims="_$G(@JOBROOT@("summary","claims")),$$NL()
+ W "lines="_$G(@JOBROOT@("summary","lines")),$$NL()
+ W "transactions="_$G(@JOBROOT@("summary","transactions")),$$NL()
+ W "warnings="_$G(@JOBROOT@("summary","warnings")),$$NL()
+ W "errors="_$G(@JOBROOT@("summary","errors")),$$NL()
+ W "artifacts="_+$G(@JOBROOT@("artifact_last")),$$NL()
  S N=0
  F  S N=$O(@JOBROOT@("artifact_by_id",N)) Q:'N  D
  . S KEY=$G(@JOBROOT@("artifact_by_id",N)) Q:KEY=""
- . W "artifact."_KEY_".role="_$G(@JOBROOT@("artifact",KEY,"role")),!
- . W "artifact."_KEY_".path="_$G(@JOBROOT@("artifact",KEY,"path")),!
- . W "artifact."_KEY_".type="_$G(@JOBROOT@("artifact",KEY,"type")),!
+ . W "artifact."_KEY_".role="_$G(@JOBROOT@("artifact",KEY,"role")),$$NL()
+ . W "artifact."_KEY_".path="_$G(@JOBROOT@("artifact",KEY,"path")),$$NL()
+ . W "artifact."_KEY_".type="_$G(@JOBROOT@("artifact",KEY,"type")),$$NL()
  C DEV U OLDIO
  Q 1
  ;
 PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
- N KEY,N,ST,DROOT
+ N KEY,N
  I +$G(JOBID)<1 Q
- S ST=$G(@JOBROOT@("meta","status"))
- I $T(SETST^EFUZYJOB)'="" D SETST^EFUZYJOB(JOBID,ST)
- E  S ^MIO("EFUZY","job",JOBID,"status")=ST
  S ^MIO("EFUZY","job",JOBID,"workflowType")=$G(@JOBROOT@("meta","workflow"))
+ S ^MIO("EFUZY","job",JOBID,"status")=$G(@JOBROOT@("meta","status"))
  S ^MIO("EFUZY","job",JOBID,"inputPath")=$G(@JOBROOT@("meta","input_path"))
  S ^MIO("EFUZY","job",JOBID,"diagSummary")=$S($G(@JOBROOT@("meta","error_text"))'="":$G(@JOBROOT@("meta","error_text")),1:"")
  S ^MIO("EFUZY","job",JOBID,"warningCount")=+$G(@JOBROOT@("summary","warnings"))
@@ -305,36 +303,20 @@ PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
  S ^MIO("EFUZY","job",JOBID,"stats","claims")=+$G(@JOBROOT@("summary","claims"))
  S ^MIO("EFUZY","job",JOBID,"stats","lines")=+$G(@JOBROOT@("summary","lines"))
  S ^MIO("EFUZY","job",JOBID,"stats","transactions")=+$G(@JOBROOT@("summary","transactions"))
- S ^MIO("EFUZY","job",JOBID,"stats","segments")=+$G(@JOBROOT@("summary","segments"))
  S ^MIO("EFUZY","job",JOBID,"stats","roundtripOk")=+$G(@JOBROOT@("summary","roundtrip_ok"))
  S ^MIO("EFUZY","job",JOBID,"stats","traceFields")=+$G(@JOBROOT@("summary","trace_fields"))
  S ^MIO("EFUZY","job",JOBID,"stats","traceSegments")=+$G(@JOBROOT@("summary","trace_segments"))
- S ^MIO("EFUZY","job",JOBID,"stats","claimCount")=+$G(@JOBROOT@("summary","claims"))
- S ^MIO("EFUZY","job",JOBID,"stats","serviceLineCount")=+$G(@JOBROOT@("summary","lines"))
- S ^MIO("EFUZY","job",JOBID,"stats","lineCount")=+$G(@JOBROOT@("summary","lines"))
- S ^MIO("EFUZY","job",JOBID,"stats","segmentCount")=+$G(@JOBROOT@("summary","segments"))
- S ^MIO("EFUZY","job",JOBID,"startedAt")=$$NOWISO^MIOUTIL()
- S ^MIO("EFUZY","job",JOBID,"endedAt")=$$NOWISO^MIOUTIL()
- K ^MIO("EFUZY","job",JOBID,"artifact")
  S N=0
  F  S N=$O(@JOBROOT@("artifact_by_id",N)) Q:'N  D
  . S KEY=$G(@JOBROOT@("artifact_by_id",N)) Q:KEY=""
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"path")=$G(@JOBROOT@("artifact",KEY,"path"))
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"type")=$G(@JOBROOT@("artifact",KEY,"type"))
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"name")=$G(@JOBROOT@("artifact",KEY,"name"))
- I $D(@JOBROOT@("artifact","canonical_claims","path")) D
- . S ^MIO("EFUZY","job",JOBID,"outputPath")=$G(@JOBROOT@("artifact","canonical_claims","path"))
- . S ^MIO("EFUZY","job",JOBID,"outputName")=$G(@JOBROOT@("artifact","canonical_claims","name"))
- K ^MIO("EFUZY","job",JOBID,"preview")
- I $D(@JOBROOT@("preview")) M ^MIO("EFUZY","job",JOBID,"preview")=@JOBROOT@("preview")
- K ^MIO("EFUZY","job",JOBID,"trace")
- I $D(@JOBROOT@("trace")) M ^MIO("EFUZY","job",JOBID,"trace")=@JOBROOT@("trace")
- K ^MIO("EFUZY","job",JOBID,"diag","warning"),^MIO("EFUZY","job",JOBID,"diag","error")
- S DROOT=$NA(@JOBROOT@("wrk","parse","diag"))
- I $D(@DROOT@("warning")) M ^MIO("EFUZY","job",JOBID,"diag","warning")=@DROOT@("warning")
- I $D(@DROOT@("error")) M ^MIO("EFUZY","job",JOBID,"diag","error")=@DROOT@("error")
  Q
  ;
+NL() ; explicit newline for stream files
+	Q $C(10)
+	;
 BOOL(VAL,DEF) ; normalize boolean-like option value
  I $G(VAL)="" Q +$G(DEF)
  I +$G(VAL)=0 Q 0
