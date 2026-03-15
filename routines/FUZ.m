@@ -1,0 +1,136 @@
+FUZ ; public efuzy site routes and controllers
+	;
+	Q
+	;
+REG(CONF)
+	N META
+	K META S META("authRequired")=0,META("roles")=""
+	D REG1("GET","/","HOME^FUZ",.META)
+	D REG1("GET","/features","FEATURES^FUZ",.META)
+	D REG1("GET","/guide","GUIDE^FUZ",.META)
+	D REG1("GET","/manual","MANUAL^FUZ",.META)
+	D REG1("GET","/services","SERVICES^FUZ",.META)
+	D REG1("GET","/demo","DEMO^FUZ",.META)
+	D REG1("GET","/contact","CONTACT^FUZ",.META)
+	D REG1("POST","/contact","CONTACTPOST^FUZ",.META)
+	D REG1("GET","/privacy","PRIVACY^FUZ",.META)
+	D REG1("GET","/terms","TERMS^FUZ",.META)
+	D REG1("GET","/robots.txt","ROBOTS^FUZ",.META)
+	D REG1("GET","/sitemap.xml","SITEMAP^FUZ",.META)
+	Q
+	;
+REG1(METHOD,PATH,TARGET,META)
+	D ADDM^MIOROUTE($G(METHOD),$G(PATH),$G(TARGET),.META)
+	S ^MIO("ROUTE","RAW",$G(METHOD),$G(PATH))=$G(TARGET)
+	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"authRequired")=+$G(META("authRequired"))
+	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"roles")=$G(META("roles"))
+	Q
+	;
+HOME(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDHOME^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_home.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+FEATURES(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDFEAT^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_features.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+GUIDE(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDGUIDE^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_guide.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+MANUAL(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDMANUAL^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_manual.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+SERVICES(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDSERVICES^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_services.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+DEMO(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDDEMO^FUZUI(.CONF,.REQ,.CTX,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_demo.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+CONTACT(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR,STATE
+	D BUILDCONTACT^FUZUI(.CONF,.REQ,.CTX,.STATE,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_contact.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+CONTACTPOST(DEV,CONF,REQ,CTX)
+	N POST,STATE,TCTX,OUT,ERR
+	D PARSEFORM(.REQ,.POST)
+	D SUBMITCONTACT^FUZUI(.CONF,.POST,.STATE)
+	D BUILDCONTACT^FUZUI(.CONF,.REQ,.CTX,.STATE,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_contact.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+PRIVACY(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDLEGAL^FUZUI(.CONF,.REQ,.CTX,"privacy",.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_legal.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+TERMS(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR
+	D BUILDLEGAL^FUZUI(.CONF,.REQ,.CTX,"terms",.TCTX)
+	D RENDERPAGE^MIOTPL("pages/fuz_legal.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
+	;
+ROBOTS(DEV,CONF,REQ,CTX)
+	N OUT
+	D ROBOTSX^FUZUI(.CONF,.OUT)
+	D RESPTXT(.DEV,.CONF,.CTX,.OUT,"text/plain; charset=utf-8")
+	Q
+	;
+SITEMAP(DEV,CONF,REQ,CTX)
+	N OUT
+	D SITEMAPX^FUZUI(.CONF,.OUT)
+	D RESPTXT(.DEV,.CONF,.CTX,.OUT,"application/xml; charset=utf-8")
+	Q
+	;
+PARSEFORM(REQ,OUT)
+	K OUT
+	D DECODEFORM^MIOFNC($G(REQ("body")),.OUT)
+	Q
+	;
+RESPHTML(DEV,CONF,CTX,OUT)
+	D RESPTXT(.DEV,.CONF,.CTX,.OUT,"text/html; charset=utf-8") Q
+RESPTXT(DEV,CONF,CTX,OUT,CTYPE)
+	N HEAD S HEAD("Content-Type")=$G(CTYPE)
+	D RESPX^MIOHTTP(.DEV,.CONF,200,.HEAD,$G(OUT),$G(CTX("request_id")),.CTX) Q
+RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
+	N OBJ S OBJ("ok")=0,OBJ("error")=$G(ERRTXT)
+	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX) Q
+	;

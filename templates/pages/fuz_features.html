@@ -1,0 +1,56 @@
+<section class="panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Workflow details</div>
+  <h1 class="mt-2 text-3xl font-semibold tracking-tight lg:text-[2.5rem]">{{page.heading}}</h1>
+  <p class="mt-3 max-w-3xl text-sm muted lg:text-[0.97rem]">{{page.lead}}</p>
+  <p class="mt-3 max-w-3xl text-sm muted">Additive test coverage, diagnostics, and traceable outputs help reinforce trust.</p>
+  <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{#pillars}}
+    <article class="panel-soft rounded-[1.15rem] p-4">
+      <div class="text-base font-semibold">{{title}}</div>
+      <p class="mt-2 text-sm muted">{{desc}}</p>
+    </article>
+    {{/pillars}}
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-4">
+  {{#steps}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <div class="text-xs font-semibold tracking-[0.18em] muted">{{step}}</div>
+    <h2 class="mt-2 text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{desc}}</p>
+  </article>
+  {{/steps}}
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+  {{#detail}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{body}}</p>
+  </article>
+  {{/detail}}
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Trust</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">Operational confidence matters</h2>
+  <div class="mt-5 grid gap-4 lg:grid-cols-4">
+    {{#trust}}
+    <article class="panel-soft rounded-[1.15rem] p-4">
+      <div class="text-base font-semibold">{{title}}</div>
+      <p class="mt-2 text-sm muted">{{body}}</p>
+    </article>
+    {{/trust}}
+  </div>
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Next step</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">Talk to us about your environment</h2>
+  <p class="mt-2 max-w-2xl text-sm muted">We can discuss evaluation access, self-hosted delivery, guides, manual review, and service options.</p>
+  <div class="mt-5 flex flex-wrap gap-3">
+    <a href="/contact" class="primary-button">Contact us</a>
+    <a href="/guide" class="quick-button">Read the guide</a>
+  </div>
+</section>

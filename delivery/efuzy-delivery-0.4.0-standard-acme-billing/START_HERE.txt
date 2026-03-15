@@ -1,0 +1,15 @@
+EFUZY buyer delivery bundle
+
+Customer: Acme Billing
+Quote/Order: Q-1001
+Version: 0.4.0
+Edition: standard
+Built at: 2026-03-15T00:52:07Z
+
+Recommended order:
+1. Read DOCS/INSTALL_GUIDE.md
+2. Read DOCS/ADMIN_GUIDE.md
+3. Review DOCS/LICENSING.md
+4. Verify RELEASE/SHA256SUMS.txt
+5. Unpack RELEASE/efuzy-0.4.0-standard.tar.gz
+6. Run INSTALLER/install_efuzy.sh inside the unpacked release tree

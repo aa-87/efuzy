@@ -1,0 +1,94 @@
+<section class="grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
+  <div class="panel fx-rise rounded-[1.6rem] p-6 lg:p-8">
+    <div class="section-kicker">{{hero.eyebrow}}</div>
+    <h1 class="mt-3 max-w-3xl text-4xl font-semibold tracking-tight lg:text-[3.1rem]">{{page.heading}}</h1>
+    <p class="mt-3 max-w-2xl text-base muted lg:text-lg">{{page.lead}}</p>
+    <div class="mt-5 space-y-2 text-sm lg:text-[0.97rem]">
+      {{#hero.copy}}<div>{{.}}</div>{{/hero.copy}}
+    </div>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <a href="{{hero.primaryHref}}" class="primary-button">{{hero.primaryLabel}}</a>
+      <a href="{{hero.secondaryHref}}" class="quick-button">{{hero.secondaryLabel}}</a>
+    </div>
+    <div class="mt-6 flex flex-wrap gap-2">
+      {{#badges}}
+      <span class="badge {{tone}}">{{label}}</span>
+      {{/badges}}
+    </div>
+  </div>
+  <div class="panel fx-rise rounded-[1.6rem] p-5 lg:p-6">
+    <div class="section-kicker">{{hero.panel.kicker}}</div>
+    <div class="mt-3 text-lg font-semibold">{{hero.panel.title}}</div>
+    <div class="mt-5 space-y-3">
+      <div class="panel-soft rounded-[1.1rem] p-4">
+        <div class="text-sm font-semibold">{{hero.panel.line1}}</div>
+        <div class="mt-1 text-sm muted">{{hero.panel.line2}}</div>
+      </div>
+      <div class="panel-soft rounded-[1.1rem] p-4">
+        <div class="text-sm font-semibold">Same product language</div>
+        <div class="mt-1 text-sm muted">Dark and light themes. Dense panels. Operational clarity.</div>
+      </div>
+      <div class="panel-soft rounded-[1.1rem] p-4 text-sm muted">{{hero.panel.line3}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  {{#pillars}}
+  <article class="panel fx-rise rounded-[1.35rem] border p-5 {{tone}}">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{desc}}</p>
+  </article>
+  {{/pillars}}
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Workflow</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">From upload to published artifact</h2>
+  <div class="mt-5 grid gap-4 lg:grid-cols-4">
+    {{#steps}}
+    <article class="panel-soft rounded-[1.15rem] p-4">
+      <div class="text-xs font-semibold tracking-[0.18em] muted">{{step}}</div>
+      <div class="mt-2 text-base font-semibold">{{title}}</div>
+      <p class="mt-2 text-sm muted">{{desc}}</p>
+    </article>
+    {{/steps}}
+  </div>
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <div class="section-kicker">{{preview.eyebrow}}</div>
+      <h2 class="mt-2 text-2xl font-semibold tracking-tight">{{preview.title}}</h2>
+      <p class="mt-2 max-w-3xl text-sm muted lg:text-[0.97rem]">{{preview.lead}}</p>
+    </div>
+    <a href="{{preview.ctaHref}}" class="quick-button">{{preview.ctaLabel}}</a>
+  </div>
+  <div class="mt-4 rounded-[1.15rem] border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100 dark:text-sky-100">{{preview.disclaimer}}</div>
+  <div class="mt-5 grid gap-4 lg:grid-cols-3">
+    {{#preview.cards}}
+    <article class="panel-soft rounded-[1.2rem] p-4">
+      <div class="text-base font-semibold">{{title}}</div>
+      <div class="mt-1 text-sm muted">{{meta}}</div>
+      <div class="mt-4 space-y-3">
+        {{#rows}}
+        <div class="flex items-center justify-between rounded-xl border border-white/5 px-3 py-2">
+          <div class="text-sm muted">{{label}}</div>
+          <div class="text-sm font-semibold">{{value}}</div>
+        </div>
+        {{/rows}}
+      </div>
+    </article>
+    {{/preview.cards}}
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-3">
+  {{#faq}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{body}}</p>
+  </article>
+  {{/faq}}
+</section>

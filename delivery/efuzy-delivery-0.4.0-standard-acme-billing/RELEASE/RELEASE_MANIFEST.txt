@@ -1,0 +1,8 @@
+app=efuzy
+version=0.4.0
+edition=standard
+built_at=2026-03-15T00:51:49Z
+package_name=efuzy-0.4.0-standard
+archive_tar_gz=efuzy-0.4.0-standard.tar.gz
+archive_zip=efuzy-0.4.0-standard.zip
+checksums=SHA256SUMS.txt

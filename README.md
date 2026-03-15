@@ -272,43 +272,104 @@ A good local project model is:
 
 - `ydb_dir=<install-root>/instance/yottadb`
 - `ydb_tmp=<install-root>/instance/tmp`
-- `ydb_log=<install-root>/tmp/efuzy/logs`
-- `MWS_CONF=<install-root>/repo/config/mws.conf.json`
+- `ydb_log=<repo-root>/tmp/efuzy/log`
+- `MWS_CONF=<repo-root>/config/mws.conf.json`
 
 ## Installation overview
 
-This setup pack includes `scripts/install_efuzy.sh`.
+This repo now includes an in-place installer model.
 
-The installer is designed to:
+The installer assumes the EFUZY repository already exists on disk.
 
-- install system prerequisites
-- install YottaDB with `ydbinstall.sh`
-- clone the application repository
-- create the EFUZY folder layout
-- generate a project environment file
-- generate a default `config/mws.conf.json`
-- generate helper scripts for compile and startup
-- optionally compile all routines
+It is designed to:
+
+- keep the runtime layout under local `tmp/efuzy`
+- create the required runtime tree automatically
+- write `instance/env/efuzy.env`
+- normalize `efuzy.rootDir` to `tmp/efuzy`
+- update `server.listen.port` when requested
+- run compile and bootstrap checks without cloning the repo
+
+### Required runtime tree
+
+The bootstrap flow creates these directories:
+
+- `tmp/efuzy/uploads`
+- `tmp/efuzy/staged`
+- `tmp/efuzy/jobs`
+- `tmp/efuzy/exports`
+- `tmp/efuzy/reports`
+- `tmp/efuzy/log`
+- `tmp/efuzy/run`
+- `tmp/efuzy/cache`
+- `tmp/efuzy/tmp`
 
 ### Example
 
 ```bash
 chmod +x scripts/install_efuzy.sh
-./scripts/install_efuzy.sh   --repo-url https://example.com/your/efuzy.git   --install-root "$HOME/efuzy-app"   --port 8081
+bash scripts/install_efuzy.sh --ydb-env-file /path/to/ydb_env_set --port 8081
 ```
+
+
+## Licensing and activation
+
+EFUZY now supports three activation modes:
+
+- `demo`
+- `evaluation`
+- `paid`
+
+Default config uses `demo`, which keeps the public demo license-free.
+
+For private evaluation and paid self-hosted delivery, EFUZY expects a local license file and a local install ID file:
+
+- `instance/license/efuzy.license`
+- `instance/license/efuzy.install_id`
+
+The license file is now a signed JWT. Production offline verification uses `MIOAUTHJWT` helpers with RS256 public-key verification. The vendor signs with a private key, and the customer install only needs the public key. The RS256 helper path expects `openssl` to be available on the host.
+
+Installer example for a paid deployment:
+
+```bash
+bash scripts/install_efuzy.sh --ydb-env-file /path/to/ydb_env_set --license-mode paid
+```
+
+Installer example for a private evaluation deployment:
+
+```bash
+bash scripts/install_efuzy.sh --ydb-env-file /path/to/ydb_env_set --license-mode evaluation
+```
+
+You can inspect activation state with:
+
+```text
+D BOOTCONF^MIO(.CONF)
+D STATUS^EFUZYLIC(.CONF,.RES)
+ZW RES
+```
+
+See `docs/LICENSING.md` for the JWT license format, RS256 offline verification model, issuance helper, and validation rules.
 
 ## Starting the app
 
-After installation:
+Recommended startup flow:
 
 ```bash
-source <install-root>/instance/env/efuzy.env
-cd <install-root>/repo
-bash <install-root>/scripts/compile_efuzy.sh
-bash <install-root>/scripts/start_efuzy.sh
+bash scripts/install_efuzy.sh --ydb-env-file /path/to/ydb_env_set
+bash scripts/start_efuzy.sh
+bash scripts/check_efuzy.sh --ready
 ```
 
-Then open the configured port in a browser.
+The helper scripts are:
+
+- `scripts/compile_efuzy.sh`
+- `scripts/start_efuzy.sh`
+- `scripts/check_efuzy.sh`
+
+The start script runs `STARTUP^EFUZYBOOT` before `start^MIO`.
+
+That bootstrap step ensures the local runtime tree exists before the listener starts.
 
 ## Testing
 
@@ -337,10 +398,14 @@ Before calling a deployment production-ready, verify:
 - upload, preview, publish, and download flows work in the browser
 - profile edits are honored in generated exports
 - all generated CSVs contain real newline bytes
-- local `tmp` paths are being used consistently
-- auth and route metadata are enforced where required
+- `efuzy.rootDir` resolves to local `tmp/efuzy`
+- `STARTUP^EFUZYBOOT` succeeds more than once without manual cleanup
+- `STATUS^EFUZYHEALTH` returns `ok=1` after install
+- `READY^EFUZYHEALTH` returns `ok=1` after startup
+- `STATUS^EFUZYLIC` returns the expected activation state
+- paid and evaluation installs have a valid local license file
+- retention policy for uploads, jobs, and artifacts is defined
 - logs and error capture are directed to project-owned locations
-- backup and retention policy for YottaDB data is defined
 - reverse proxy and TLS are configured outside the M routine web server
 
 ## Security notes

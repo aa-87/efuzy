@@ -1,0 +1,45 @@
+<section class="panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Evaluation preview</div>
+  <h1 class="mt-2 text-3xl font-semibold tracking-tight lg:text-[2.5rem]">{{page.heading}}</h1>
+  <p class="mt-3 max-w-3xl text-sm muted lg:text-[0.97rem]">{{page.lead}}</p>
+  <div class="mt-5 rounded-[1.15rem] border border-amber-400/25 bg-amber-400/10 px-4 py-4">
+    <div class="text-sm font-semibold">{{demo.callout.title}}</div>
+    <div class="mt-2 text-sm muted">{{demo.callout.body}}</div>
+  </div>
+  <div class="mt-5 flex flex-wrap gap-3">
+    <a href="{{demo.openHref}}" class="primary-button">{{demo.openLabel}}</a>
+    <a href="/contact" class="quick-button">Contact us</a>
+  </div>
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Application preview</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">The product keeps a dense, operator-first layout</h2>
+  <p class="mt-2 max-w-3xl text-sm muted">The public site uses the same visual language as the application. Panels stay dense. Actions stay clear. Status stays visible.</p>
+  <div class="mt-4 rounded-[1.15rem] border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm text-sky-100 dark:text-sky-100">{{preview.disclaimer}}</div>
+  <div class="mt-5 grid gap-4 lg:grid-cols-3">
+    {{#preview.cards}}
+    <article class="panel-soft rounded-[1.2rem] p-4">
+      <div class="text-base font-semibold">{{title}}</div>
+      <div class="mt-1 text-sm muted">{{meta}}</div>
+      <div class="mt-4 space-y-3">
+        {{#rows}}
+        <div class="flex items-center justify-between rounded-xl border border-white/5 px-3 py-2">
+          <div class="text-sm muted">{{label}}</div>
+          <div class="text-sm font-semibold">{{value}}</div>
+        </div>
+        {{/rows}}
+      </div>
+    </article>
+    {{/preview.cards}}
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-3">
+  {{#demo.notes}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{desc}}</p>
+  </article>
+  {{/demo.notes}}
+</section>

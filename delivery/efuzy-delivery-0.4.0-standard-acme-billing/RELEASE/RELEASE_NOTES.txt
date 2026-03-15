@@ -1,0 +1,18 @@
+EFUZY release 0.4.0 (standard)
+
+Included:
+- application source tree
+- installer script
+- config templates
+- templates and routines
+- release manifest
+- checksums
+- changelog
+- release engineering docs
+
+Recommended first steps:
+1. Read README.md
+2. Read docs/RELEASE_ENGINEERING.md
+3. Run scripts/install_efuzy.sh
+4. Compile in your target YottaDB environment
+5. Run smoke validation before customer delivery

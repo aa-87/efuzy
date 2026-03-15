@@ -1,0 +1,11 @@
+bundle_name=efuzy-delivery-0.4.0-standard-acme-billing
+customer=Acme Billing
+quote_id=Q-1001
+version=0.4.0
+edition=standard
+built_at=2026-03-15T00:52:07Z
+release_archive=RELEASE/efuzy-0.4.0-standard.tar.gz
+release_archive_zip=RELEASE/efuzy-0.4.0-standard.zip
+release_checksums=RELEASE/SHA256SUMS.txt
+docs_package=efuzy-docs-0.4.0-standard.tar.gz
+installer_package=efuzy-installer-0.4.0-standard.tar.gz

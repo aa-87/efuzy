@@ -100,7 +100,8 @@
       "prefix": [
         "/api/",
         "/ws/app"
-      ]},
+      ]
+    },
     "exempt": {
       "prefix": [
         "/v1/",
@@ -111,7 +112,8 @@
         "/app",
         "/ws",
         "/efuzy/*"
-      ]},
+      ]
+    },
     "protectMode": "route",
     "jwt": {
       "bearerPrefix": "Bearer ",
@@ -129,5 +131,43 @@
       "jwksRefreshMaxCooldownSeconds": 300,
       "jwksNegativeCacheMax": 1000
     }
+  },
+  "efuzy": {
+    "rootDir": "tmp/efuzy",
+    "retention": {
+      "uploadsDays": 2,
+      "jobsDays": 30,
+      "allowDeletePublished": 0
+    },
+    "license": {
+      "mode": "demo",
+      "edition": "demo",
+      "filePath": "instance/license/efuzy.license",
+      "installIdPath": "instance/license/efuzy.install_id",
+      "hostStrategy": "none",
+      "product": "efuzy",
+      "requireValidOnStartup": 0,
+      "jwtIssuer": "efuzy-license",
+      "jwtAudience": "efuzy",
+      "jwtAlgorithm": "RS256",
+      "rs256PublicKeyPath": "instance/license/keys/efuzy_license_public.pem",
+      "rs256PrivateKeyPath": "",
+      "opensslBin": "openssl",
+      "allowHmacJwt": 0,
+      "jwtSecret": "",
+      "jwtClockSkewSeconds": 60,
+      "longLivedDays": 3650
+    }
+  },
+  "fuz": {
+    "siteUrl": "https://efuzy.com",
+    "brand": "efuzy",
+    "tagline": "Self-hosted file-processing workflow workspace",
+    "shell": "efuzy / MUMPS.IO",
+    "demoHref": "/efuzy/workspace",
+    "demoArtifactTtlHours": 24,
+    "demoArtifactTtlLabel": "24 hours",
+    "contactEmail": "hello@efuzy.com",
+    "contactMaxMessageChars": 2000
   }
 }

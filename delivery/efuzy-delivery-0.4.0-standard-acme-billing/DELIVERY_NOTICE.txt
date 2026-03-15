@@ -1,0 +1,19 @@
+EFUZY commercial delivery
+
+This package is intended for self-hosted customer delivery.
+
+Customer: Acme Billing
+Quote/Order: Q-1001
+Version: 0.4.0
+Edition: standard
+Package name: efuzy-delivery-0.4.0-standard-acme-billing
+
+Included:
+- release archive(s)
+- release manifest and release notes
+- checksums
+- documentation package
+- installer package
+
+This delivery does not itself activate the product.
+Activation and licensing behavior are controlled by the local install and license mode.

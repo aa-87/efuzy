@@ -1,0 +1,62 @@
+EFUZYBOOTT ; tests for EFUZYBOOT
+ ;
+ Q
+ ;
+START
+ D T001
+ D T002
+ D T003
+ D T004
+ Q
+ ;
+T001 ; DIRS creates required runtime tree under local tmp/efuzy*
+ N ROOT,CONF,RES
+ S ROOT=$$TMPROOT^EFUZYTESTU("boot1")
+ D RESET^EFUZYTESTU(ROOT)
+ D SETCONF^EFUZYTESTU(.CONF,ROOT)
+ D OK^MIOTASSERT($$DIRS^EFUZYBOOT(.CONF,.RES),"[T001][dirs ok]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/uploads"),"[T001][uploads]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/staged"),"[T001][staged]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/jobs"),"[T001][jobs]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/exports"),"[T001][exports]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/reports"),"[T001][reports]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/log"),"[T001][log]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/run"),"[T001][run]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/cache"),"[T001][cache]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/tmp"),"[T001][tmp]")
+ D RESET^EFUZYTESTU(ROOT)
+ Q
+ ;
+T002 ; CHECKENV rejects non-local roots
+ N CONF,RES
+ D RESET^EFUZYTESTU("")
+ S CONF("efuzy","rootDir")="/srv/efuzy"
+ D EQ^MIOTASSERT($$CHECKENV^EFUZYBOOT(.CONF,.RES),0,"[T002][checkenv fail]")
+ D EQ^MIOTASSERT($G(RES("error")),"root_not_local_tmp","[T002][error]")
+ Q
+ ;
+T003 ; ENSURE seeds runtime globals and profile defaults
+ N ROOT,CONF,RES
+ S ROOT=$$TMPROOT^EFUZYTESTU("boot3")
+ D RESET^EFUZYTESTU(ROOT)
+ D SETCONF^EFUZYTESTU(.CONF,ROOT)
+ D OK^MIOTASSERT($$ENSURE^EFUZYBOOT(.CONF,.RES),"[T003][ensure ok]")
+ D EQ^MIOTASSERT($G(^MIO("EFUZY","runtime","root")),ROOT,"[T003][runtime root]")
+ D EQ^MIOTASSERT($G(^MIO("EFUZY","runtime","schema")),1,"[T003][schema]")
+ D EQ^MIOTASSERT($G(^MIO("EFUZY","cfg","seeded")),1,"[T003][profiles seeded]")
+ D RESET^EFUZYTESTU(ROOT)
+ Q
+ ;
+T004 ; STARTUP is idempotent
+ N ROOT,CONF,R1,R2
+ S ROOT=$$TMPROOT^EFUZYTESTU("boot4")
+ D RESET^EFUZYTESTU(ROOT)
+ D SETCONF^EFUZYTESTU(.CONF,ROOT)
+ D OK^MIOTASSERT($$STARTUP^EFUZYBOOT(.CONF,.R1),"[T004][startup1 ok]")
+ D OK^MIOTASSERT($$STARTUP^EFUZYBOOT(.CONF,.R2),"[T004][startup2 ok]")
+ D EQ^MIOTASSERT($G(R1("root")),ROOT,"[T004][root1]")
+ D EQ^MIOTASSERT($G(R2("root")),ROOT,"[T004][root2]")
+ D OK^MIOTASSERT($$DIREX^EFUZYHEALTH(ROOT_"/uploads"),"[T004][uploads still exists]")
+ D RESET^EFUZYTESTU(ROOT)
+ Q
+ ;

@@ -1,0 +1,49 @@
+<section class="panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">{{services.eyebrow}}</div>
+  <h1 class="mt-2 text-3xl font-semibold tracking-tight lg:text-[2.5rem]">{{page.heading}}</h1>
+  <p class="mt-3 max-w-3xl text-sm muted lg:text-[0.97rem]">{{page.lead}}</p>
+  <p class="mt-4 max-w-3xl text-sm muted">{{services.intro}}</p>
+  <p class="mt-3 max-w-3xl text-sm muted">Installation, development, and support services are available for a fee.</p>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+  {{#services.offers}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{body}}</p>
+  </article>
+  {{/services.offers}}
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Engagement</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">How we work</h2>
+  <div class="mt-5 grid gap-4 lg:grid-cols-3">
+    {{#services.engagement}}
+    <article class="panel-soft rounded-[1.15rem] p-4">
+      <div class="text-xs font-semibold tracking-[0.18em] muted">{{step}}</div>
+      <div class="mt-2 text-base font-semibold">{{title}}</div>
+      <p class="mt-2 text-sm muted">{{desc}}</p>
+    </article>
+    {{/services.engagement}}
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-3">
+  {{#services.assurance}}
+  <article class="panel fx-rise rounded-[1.35rem] p-5">
+    <h2 class="text-lg font-semibold">{{title}}</h2>
+    <p class="mt-2 text-sm muted">{{body}}</p>
+  </article>
+  {{/services.assurance}}
+</section>
+
+<section class="mt-6 panel fx-rise rounded-[1.6rem] p-6 lg:p-7">
+  <div class="section-kicker">Next step</div>
+  <h2 class="mt-2 text-2xl font-semibold tracking-tight">{{services.ctaTitle}}</h2>
+  <p class="mt-2 max-w-3xl text-sm muted">{{services.ctaBody}}</p>
+  <div class="mt-5 flex flex-wrap gap-3">
+    <a href="{{services.ctaPrimaryHref}}" class="primary-button">{{services.ctaPrimaryLabel}}</a>
+    <a href="{{services.ctaSecondaryHref}}" class="quick-button">{{services.ctaSecondaryLabel}}</a>
+  </div>
+</section>
