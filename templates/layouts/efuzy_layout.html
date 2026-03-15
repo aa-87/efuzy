@@ -150,11 +150,11 @@
             <p class="mt-2 text-sm muted lg:text-[0.95rem]">{{page.lead}}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <a href="/efuzy/workspace" class="quick-button">Workspace</a>
+            {{#session.isAuthenticated}}<a href="/efuzy/workspace" class="quick-button">Workspace</a>{{/session.isAuthenticated}}{{^session.isAuthenticated}}<a href="/efuzy/demo" class="quick-button">Demo access</a>{{/session.isAuthenticated}}
             <a href="/efuzy/jobs" class="quick-button">Jobs</a>
             <a href="/efuzy/profiles" class="quick-button">Profiles</a>
             <a href="/efuzy/automation" class="quick-button">Automation</a>
-            <button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
+            {{#session.isAuthenticated}}<span class="badge badge-slate">{{session.login}}</span><form method="post" action="{{session.logoutAction}}" class="inline"><button type="submit" class="ghost-button">Sign out</button></form>{{/session.isAuthenticated}}<button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
           </div>
         </div>
       </header>

@@ -86,7 +86,7 @@ T120(FAIL) ; demo render includes expiry disclaimer
  D RENDERPAGE^MIOTPL("pages/fuz_demo.html","layouts/fuz_layout.html",.CONF,.TCTX,.OUT,.ERR)
  D EQ(.FAIL,"[T120][render ok]",$D(ERR)=0,1)
  D EQ(.FAIL,"[T120][disclaimer]",OUT["expire",1)
- D EQ(.FAIL,"[T120][workspace link]",OUT["/efuzy/workspace",1)
+ D EQ(.FAIL,"[T120][workspace link]",OUT["/efuzy/demo",1)
  Q
  ;
 T130(FAIL) ; contact render includes form fields

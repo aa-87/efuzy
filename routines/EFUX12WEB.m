@@ -67,28 +67,40 @@ EXPORT837(INPATH,WORKBASE,WEBROOT,OPT,RES) ; build export/download payload from 
  Q
  ;
 DETAIL(JOBREF,WEBROOT,OPT,RES) ; build detail payload from live job root or published job id
- N JID,JROOT
+ N JID,JROOT,OWN
  K RES
  D INIT(WEBROOT,"detail")
  S JID=+$G(JOBREF)
- I JID>0,$D(^MIO("EFUZY","job",JID)) D  Q
+ S OWN=+$G(OPT("ownerId"))
+ I JID>0,$D(^MIO("EFUZY","job",JID)) D  G DETAILX
+ . I OWN>0,$G(^MIO("EFUZY","job",JID,"ownerId"))'=OWN D FAILRESP(WEBROOT,404,"not_found","Job reference not found") Q
  . D BLDPUB(JID,WEBROOT,.OPT,.RES)
  S JROOT=$G(JOBREF)
- I JROOT?1"^".E,$D(@JROOT) D  Q
+ I JROOT?1"^".E,$D(@JROOT) D  G DETAILX
  . D BLDLIVE(JROOT,WEBROOT,"detail",.OPT,.RES)
  D FAILRESP(WEBROOT,404,"not_found","Job reference not found")
- M RES=@WEBROOT@("response")
+DETAILX M RES=@WEBROOT@("response")
  S RES("http_status")=+$G(@WEBROOT@("http","status"))
  Q
  ;
 HISTORY(WEBROOT,OPT,RES) ; published job history payload from ^MIO("EFUZY","job")
- N LIM,WF,ST,JID,CNT,N,START
+ N LIM,WF,ST,JID,CNT,N,START,OWN
  K RES
  D INIT(WEBROOT,"history")
  S LIM=+$G(OPT("limit")) I LIM<1 S LIM=25
  S WF=$G(OPT("workflow"))
  S ST=$G(OPT("status"))
  S START=+$G(OPT("start_after"))
+ S OWN=+$G(OPT("ownerId"))
+ I OWN>0 D  G HISTDONE
+ . S JID=$S(START>0:$O(^MIO("EFUZY","idx","owner","job",OWN,START),-1),1:$O(^MIO("EFUZY","idx","owner","job",OWN,""),-1))
+ . S CNT=0,N=0
+ . F  Q:JID=""!(CNT>=LIM)  D  S JID=$O(^MIO("EFUZY","idx","owner","job",OWN,JID),-1)
+ . . I '$D(^MIO("EFUZY","job",JID)) Q
+ . . I WF'="",$G(^MIO("EFUZY","job",JID,"workflowType"))'=WF Q
+ . . I ST'="",$G(^MIO("EFUZY","job",JID,"status"))'=ST Q
+ . . S CNT=CNT+1,N=N+1
+ . . D ADDPUB(JID,WEBROOT,N)
  S JID=$S(START>0:$O(^MIO("EFUZY","job",START),-1),1:$O(^MIO("EFUZY","job",""),-1))
  S CNT=0,N=0
  F  Q:JID=""!(CNT>=LIM)  D  S JID=$O(^MIO("EFUZY","job",JID),-1)
@@ -97,6 +109,7 @@ HISTORY(WEBROOT,OPT,RES) ; published job history payload from ^MIO("EFUZY","job"
  . I ST'="",$G(^MIO("EFUZY","job",JID,"status"))'=ST Q
  . S CNT=CNT+1,N=N+1
  . D ADDPUB(JID,WEBROOT,N)
+HISTDONE
  S @WEBROOT@("response","ok")=1
  S @WEBROOT@("response","jobs")=CNT
  S @WEBROOT@("response","limit")=LIM

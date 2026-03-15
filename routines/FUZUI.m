@@ -7,7 +7,7 @@ CONFDEF(CONF)
 	I $G(CONF("fuz","brand"))="" S CONF("fuz","brand")="efuzy"
 	I $G(CONF("fuz","tagline"))="" S CONF("fuz","tagline")="Self-hosted file-processing workflow workspace"
 	I $G(CONF("fuz","shell"))="" S CONF("fuz","shell")="efuzy / MUMPS.IO"
-	I $G(CONF("fuz","demoHref"))="" S CONF("fuz","demoHref")="/efuzy/workspace"
+	I $G(CONF("fuz","demoHref"))="" S CONF("fuz","demoHref")="/efuzy/demo"
 	I +$G(CONF("fuz","demoArtifactTtlHours"))<1 S CONF("fuz","demoArtifactTtlHours")=24
 	I $G(CONF("fuz","demoArtifactTtlLabel"))="" S CONF("fuz","demoArtifactTtlLabel")=$$TTLLAB(+CONF("fuz","demoArtifactTtlHours"))
 	I $G(CONF("fuz","contactEmail"))="" S CONF("fuz","contactEmail")="hello@efuzy.com"
@@ -142,7 +142,7 @@ BUILDDEMO(CONF,REQ,CTX,TCTX)
 	D PREVIEW(.CONF,.TCTX)
 	S TCTX("demo","callout","title")="Evaluation disclaimer"
 	S TCTX("demo","callout","body")="Use evaluation data only. Uploaded files and generated artifacts expire within "_$G(CONF("fuz","demoArtifactTtlLabel"))_". Do not upload production PHI."
-	S TCTX("demo","openLabel")="Open evaluation workspace"
+	S TCTX("demo","openLabel")="Create evaluation login"
 	S TCTX("demo","openHref")=$G(CONF("fuz","demoHref"))
 	S TCTX("demo","notes",1,"title")="What you can review"
 	S TCTX("demo","notes",1,"desc")="Workspace flow. Preview samples. Profile-aware export."
@@ -396,7 +396,7 @@ PREVIEW(CONF,TCTX)
 	S TCTX("preview","title")="A close look at the workflow"
 	S TCTX("preview","lead")="The live product keeps the same visual language. Dense cards. Clear status. Quick paths to preview and artifacts."
 	S TCTX("preview","disclaimer")="Evaluation uploads and generated artifacts expire within "_TTL_"."
-	S TCTX("preview","ctaLabel")="Open evaluation workspace"
+	S TCTX("preview","ctaLabel")="Create evaluation login"
 	S TCTX("preview","ctaHref")=$G(CONF("fuz","demoHref"))
 	S TCTX("preview","cards",1,"title")="Workspace"
 	S TCTX("preview","cards",1,"meta")="Uploads, profiles, recent jobs"

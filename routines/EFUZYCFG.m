@@ -2,7 +2,7 @@ EFUZYCFG ; efuzy profiles and automation config
 	;
 	Q
 	;
-SEED() ; ensure seed profiles exist
+SEED() ; ensure legacy shared seed profiles exist
 	I $G(^MIO("EFUZY","cfg","seeded"))=1 Q
 	S ^MIO("EFUZY","cfg","seeded")=1
 	N P,ID,ERR
@@ -28,6 +28,33 @@ SEED() ; ensure seed profiles exist
 	D SAVEONE(.P,.ID,.ERR)
 	Q
 	;
+SEEDUSER(USERID)
+	N P,ID,ERR
+	I +$G(USERID)<1 Q
+	I $G(^MIO("EFUZY","cfg","ownerSeeded",+USERID))=1 Q
+	S ^MIO("EFUZY","cfg","ownerSeeded",+USERID)=1
+	K P
+	S P("name")="Claim Summary"
+	S P("workflowType")="837_to_csv"
+	S P("exportMode")="claim_summary"
+	S P("selectedFields")=$$DFLIST^EFU837EXPMP("claim_summary")
+	S P("fieldOrder")=P("selectedFields")
+	S P("delimiter")="," S P("header")=1 S P("quoteMode")="minimal"
+	S P("rowSource")="claim"
+	S P("outputNamingRule")="{{source_base}}-claim-summary.csv"
+	D SAVEONE(.P,.ID,.ERR,+$G(USERID))
+	K P
+	S P("name")="Service Line"
+	S P("workflowType")="837_to_csv"
+	S P("exportMode")="service_line"
+	S P("selectedFields")=$$DFLIST^EFU837EXPMP("service_line")
+	S P("fieldOrder")=P("selectedFields")
+	S P("delimiter")="," S P("header")=1 S P("quoteMode")="minimal"
+	S P("rowSource")="line"
+	S P("outputNamingRule")="{{source_base}}-service-lines.csv"
+	D SAVEONE(.P,.ID,.ERR,+$G(USERID))
+	Q
+	;
 NEXTPROF()
 	N ID
 	L +^MIO("EFUZY","SEQ","PROFILE"):2 E  Q 0
@@ -42,16 +69,17 @@ NEXTAUTO()
 	L -^MIO("EFUZY","SEQ","AUTO")
 	Q ID
 	;
-SAVE(CONF,POST,ID,ERR)
-	D SEEDCHK
-	Q:$Q $$SAVEONE(.POST,.ID,.ERR)
-	D SAVEONE(.POST,.ID,.ERR)
+SAVE(CONF,POST,ID,ERR,USERID)
+	D SEEDCHK(+$G(USERID))
+	Q:$Q $$SAVEONE(.POST,.ID,.ERR,+$G(USERID))
+	D SAVEONE(.POST,.ID,.ERR,+$G(USERID))
 	Q
 	;
-SAVEONE(POST,ID,ERR)
-	N MODE,SEL,ORD,DELIM,QMODE,ROWSRC,NAMING,WF,NOW,OLDNM,NEWNM
+SAVEONE(POST,ID,ERR,USERID)
+	N MODE,SEL,ORD,DELIM,QMODE,ROWSRC,NAMING,WF,NOW,OLDNM,NEWNM,OLDOWN
 	K ERR
 	S ID=+$G(POST("id"))
+	I ID,+$G(USERID)>0,'$$OWNSPROF^EFUZYAUTH(+USERID,ID) S ERR("error")="profile_not_found" Q:$QUIT 0 Q
 	I 'ID S ID=$$NEXTPROF()
 	I 'ID S ERR("error")="profile_seq_busy" Q:$QUIT 0 Q
 	S MODE=$$MODE($G(POST("exportMode")))
@@ -79,38 +107,50 @@ SAVEONE(POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","profile",ID,"outputNamingRule")=NAMING
 	S ^MIO("EFUZY","cfg","profile",ID,"updatedAt")=NOW
 	I '$D(^MIO("EFUZY","cfg","profile",ID,"createdAt")) S ^MIO("EFUZY","cfg","profile",ID,"createdAt")=NOW
+	S OLDOWN=+$G(^MIO("EFUZY","cfg","profile",ID,"ownerId"))
+	I +$G(USERID)>0 D
+	. I OLDOWN>0,OLDOWN'=+USERID D UNSTAMP^EFUZYAUTH("profile",OLDOWN,ID)
+	. D STAMPPROF^EFUZYAUTH(ID,+$G(USERID))
 	S NEWNM=$ZCONVERT($G(^MIO("EFUZY","cfg","profile",ID,"name")),"L")
 	I NEWNM'="" S ^MIO("EFUZY","idx","profile","name",NEWNM,ID)=""
 	Q:$QUIT 1 Q
 	;
-GET(CONF,ID,OUT)
-	D SEEDCHK
+GET(CONF,ID,OUT,USERID)
+	D SEEDCHK(+$G(USERID))
 	K OUT
-	I ID="" S ID=$O(^MIO("EFUZY","cfg","profile",0))
+	I ID="" D  Q $S(+$G(ID)>0:1,1:0)
+	. I +$G(USERID)>0 S ID=$O(^MIO("EFUZY","idx","owner","profile",+USERID,0)) Q
+	. S ID=$O(^MIO("EFUZY","cfg","profile",0))
 	I +$G(ID)<1 Q 0
 	I '$D(^MIO("EFUZY","cfg","profile",ID)) Q 0
+	I +$G(USERID)>0,'$$OWNSPROF^EFUZYAUTH(+USERID,+ID) Q 0
 	M OUT=^MIO("EFUZY","cfg","profile",ID)
 	Q 1
 	;
-LOADPROFL(CONF,TCTX)
-	D SEEDCHK
+LOADPROFL(CONF,TCTX,USERID)
+	D SEEDCHK(+$G(USERID))
 	N ID,N
 	S (ID,N)=0
+	I +$G(USERID)>0 D  Q
+	. F  S ID=$O(^MIO("EFUZY","idx","owner","profile",+USERID,ID)) Q:'ID  D
+	. . S N=N+1
+	. . D PROFCTX(ID,.TCTX,N)
+	. I 'N S TCTX("profilesEmpty")=1
 	F  S ID=$O(^MIO("EFUZY","cfg","profile",ID)) Q:'ID  D
 	. S N=N+1
 	. D PROFCTX(ID,.TCTX,N)
 	I 'N S TCTX("profilesEmpty")=1
 	Q
 	;
-LOADPROF(CONF,ID,TCTX)
+LOADPROF(CONF,ID,TCTX,USERID)
 	N P
 	K TCTX("profile")
-	D SEEDCHK
+	D SEEDCHK(+$G(USERID))
 	I $G(ID)="new" D  Q
 	. D DEFAULTP(.TCTX)
 	. D FIELDTOKS("selectedFields",.TCTX)
 	. D FIELDTOKS("fieldOrder",.TCTX)
-	I '$$GET(.CONF,$G(ID),.P) S TCTX("profileMissing")=1 Q
+	I '$$GET(.CONF,$G(ID),.P,+$G(USERID)) S TCTX("profileMissing")=1 Q
 	M TCTX("profile")=P
 	S TCTX("profile","selectedFieldsText")=$G(P("selectedFields"))
 	S TCTX("profile","fieldOrderText")=$G(P("fieldOrder"))
@@ -146,19 +186,23 @@ PROFCTX(ID,TCTX,N)
 	S TCTX("profiles",N,"href")="/efuzy/profiles/"_ID
 	Q
 	;
-DELPROF(CONF,ID,ERR)
-	N NM
+DELPROF(CONF,ID,ERR,USERID)
+	N NM,OWN
 	K ERR
 	I +$G(ID)<1 S ERR("error")="profile_id_required" Q:$QUIT 0 Q
+	S OWN=+$G(^MIO("EFUZY","cfg","profile",ID,"ownerId"))
+	I +$G(USERID)>0,OWN'=+USERID S ERR("error")="profile_not_found" Q:$QUIT 0 Q
 	S NM=$ZCONVERT($G(^MIO("EFUZY","cfg","profile",ID,"name")),"L")
 	I NM'="" K ^MIO("EFUZY","idx","profile","name",NM,ID)
+	I OWN>0 D UNSTAMP^EFUZYAUTH("profile",OWN,ID)
 	K ^MIO("EFUZY","cfg","profile",ID)
 	Q:$QUIT 1 Q
 	;
-SAVEAUTO(CONF,POST,ID,ERR)
-	N NOW
+SAVEAUTO(CONF,POST,ID,ERR,USERID)
+	N NOW,OLDOWN
 	K ERR
 	S ID=+$G(POST("id"))
+	I ID,+$G(USERID)>0,'$$OWNSAUTO^EFUZYAUTH(+USERID,ID) S ERR("error")="automation_not_found" Q:$QUIT 0 Q
 	I 'ID S ID=$$NEXTAUTO()
 	I 'ID S ERR("error")="automation_seq_busy" Q:$QUIT 0 Q
 	S NOW=$$NOWISO^MIOUTIL()
@@ -177,26 +221,44 @@ SAVEAUTO(CONF,POST,ID,ERR)
 	S ^MIO("EFUZY","cfg","auto",ID,"namingRule")=$S($G(POST("namingRule"))'="":$G(POST("namingRule")),1:"{{source_base}}-{{timestamp}}.csv")
 	S ^MIO("EFUZY","cfg","auto",ID,"updatedAt")=NOW
 	I '$D(^MIO("EFUZY","cfg","auto",ID,"createdAt")) S ^MIO("EFUZY","cfg","auto",ID,"createdAt")=NOW
+	S OLDOWN=+$G(^MIO("EFUZY","cfg","auto",ID,"ownerId"))
+	I +$G(USERID)>0 D
+	. I OLDOWN>0,OLDOWN'=+USERID D UNSTAMP^EFUZYAUTH("auto",OLDOWN,ID)
+	. D STAMPAUTO^EFUZYAUTH(ID,+$G(USERID))
 	Q:$QUIT 1 Q
 	;
-LOADAUTOS(CONF,TCTX)
+LOADAUTOS(CONF,TCTX,USERID)
 	N ID,N
 	S (ID,N)=0
+	I +$G(USERID)>0 D  Q
+	. F  S ID=$O(^MIO("EFUZY","idx","owner","auto",+USERID,ID)) Q:'ID  D
+	. . I '$D(^MIO("EFUZY","cfg","auto",ID)) Q
+	. . S N=N+1
+	. . D AUTOCTX(ID,.TCTX,N)
+	. I 'N S TCTX("automationEmpty")=1
 	F  S ID=$O(^MIO("EFUZY","cfg","auto",ID)) Q:'ID  D
 	. S N=N+1
-	. S TCTX("automation",N,"id")=ID
-	. S TCTX("automation",N,"name")=$G(^MIO("EFUZY","cfg","auto",ID,"name"))
-	. S TCTX("automation",N,"workflowType")=$G(^MIO("EFUZY","cfg","auto",ID,"workflowType"))
-	. S TCTX("automation",N,"inputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"inputFolder"))
-	. S TCTX("automation",N,"outputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"outputFolder"))
-	. S TCTX("automation",N,"selectedProfile")=$G(^MIO("EFUZY","cfg","auto",ID,"selectedProfile"))
-	. S TCTX("automation",N,"enabled")=$S(+$G(^MIO("EFUZY","cfg","auto",ID,"enabled")):1,1:0)
+	. D AUTOCTX(ID,.TCTX,N)
 	I 'N S TCTX("automationEmpty")=1
 	Q
 	;
-DELAUTO(CONF,ID,ERR)
+AUTOCTX(ID,TCTX,N)
+	S TCTX("automation",N,"id")=ID
+	S TCTX("automation",N,"name")=$G(^MIO("EFUZY","cfg","auto",ID,"name"))
+	S TCTX("automation",N,"workflowType")=$G(^MIO("EFUZY","cfg","auto",ID,"workflowType"))
+	S TCTX("automation",N,"inputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"inputFolder"))
+	S TCTX("automation",N,"outputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"outputFolder"))
+	S TCTX("automation",N,"selectedProfile")=$G(^MIO("EFUZY","cfg","auto",ID,"selectedProfile"))
+	S TCTX("automation",N,"enabled")=$S(+$G(^MIO("EFUZY","cfg","auto",ID,"enabled")):1,1:0)
+	Q
+	;
+DELAUTO(CONF,ID,ERR,USERID)
+	N OWN
 	K ERR
 	I +$G(ID)<1 S ERR("error")="automation_id_required" Q:$QUIT 0 Q
+	S OWN=+$G(^MIO("EFUZY","cfg","auto",ID,"ownerId"))
+	I +$G(USERID)>0,OWN'=+USERID S ERR("error")="automation_not_found" Q:$QUIT 0 Q
+	I OWN>0 D UNSTAMP^EFUZYAUTH("auto",OWN,ID)
 	K ^MIO("EFUZY","cfg","auto",ID)
 	Q:$QUIT 1 Q
 	;
@@ -213,7 +275,8 @@ REQ(VAL,ERRCODE,ERR)
 	I $G(VAL)="" S ERR("error")=ERRCODE Q ""
 	Q VAL
 	;
-SEEDCHK
+SEEDCHK(USERID)
+	I +$G(USERID)>0 D SEEDUSER(+$G(USERID)) Q
 	I '$G(^MIO("EFUZY","cfg","seeded")) D SEED
 	Q
 	;

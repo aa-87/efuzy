@@ -57,11 +57,11 @@ T010(FAIL) ; home builder sets SEO and preview context
 T020(FAIL) ; demo builder exposes disclaimer and open href
  N CONF,REQ,CTX,TCTX
  D BASECONF(.CONF)
- S CONF("fuz","demoHref")="/efuzy/workspace"
+ S CONF("fuz","demoHref")="/efuzy/demo"
  S CONF("fuz","demoArtifactTtlHours")=48
  S CONF("fuz","demoArtifactTtlLabel")=$$TTLLAB^FUZUI(48)
  D BUILDDEMO^FUZUI(.CONF,.REQ,.CTX,.TCTX)
- D EQ(.FAIL,"[T020][open href]",$G(TCTX("demo","openHref")),"/efuzy/workspace")
+ D EQ(.FAIL,"[T020][open href]",$G(TCTX("demo","openHref")),"/efuzy/demo")
  D EQ(.FAIL,"[T020][callout]",$G(TCTX("demo","callout","body"))["2 days",1)
  Q
  ;

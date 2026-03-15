@@ -40,13 +40,13 @@
             </div>
             <div>
               <label class="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">Export mode</label>
-              <select name="exportMode" class="select">
+              <select name="exportMode" class="select dark:bg-black">
                 {{#maps.modes}}<option value="{{id}}" {{#isSelected}}selected{{/isSelected}}>{{label}}</option>{{/maps.modes}}
               </select>
             </div>
             <div>
               <label class="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">Row source</label>
-              <select name="rowSource" class="select">
+              <select name="rowSource" class="select dark:bg-black">
                 <option value="claim" {{#profile.rowClaim}}selected{{/profile.rowClaim}}>Claim</option>
                 <option value="line" {{#profile.rowLine}}selected{{/profile.rowLine}}>Service line</option>
               </select>
@@ -57,7 +57,7 @@
             </div>
             <div>
               <label class="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">Quote mode</label>
-              <select name="quoteMode" class="select">
+              <select name="quoteMode" class="select dark:bg-black">
                 <option value="minimal" {{#profile.quoteMinimal}}selected{{/profile.quoteMinimal}}>Minimal</option>
                 <option value="all" {{#profile.quoteAll}}selected{{/profile.quoteAll}}>All fields</option>
                 <option value="none" {{#profile.quoteNone}}selected{{/profile.quoteNone}}>None</option>
@@ -65,7 +65,7 @@
             </div>
             <div>
               <label class="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] muted">Header row</label>
-              <select name="header" class="select">
+              <select name="header" class="select dark:bg-black">
                 <option value="1" {{#profile.headerOn}}selected{{/profile.headerOn}}>Include header</option>
                 <option value="0" {{#profile.headerOff}}selected{{/profile.headerOff}}>No header</option>
               </select>

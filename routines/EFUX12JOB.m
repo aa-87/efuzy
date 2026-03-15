@@ -13,7 +13,7 @@ EFUX12JOB ; efuzy x12 job artifact packaging helpers
  ;
 RUN837(INPATH,WORKBASE,JOBROOT,OPT,RES) ; standard 837 artifact job
  N PROOT,CROOT,BROOT,PRES,ERES,LRES,WRES,BRES,CRES,TRES
- N BUILD,RTCHECK,MODE,PSPATH,RTPATH,JMPATH,JOBID,TRPATH,TRON
+ N BUILD,RTCHECK,MODE,PSPATH,RTPATH,JMPATH,JOBID,TRPATH,TRON,WERR
  K RES
  I $G(JOBROOT)="" S JOBROOT=$NA(^TMP($J,"EFUX12JOB"))
  K @JOBROOT
@@ -21,6 +21,7 @@ RUN837(INPATH,WORKBASE,JOBROOT,OPT,RES) ; standard 837 artifact job
  D INIT(JOBROOT,$G(INPATH),$G(WORKBASE),.OPT)
  I $G(INPATH)="" D FAIL(JOBROOT,"missing_inpath","Input path is required") G EXIT
  I $G(WORKBASE)="" D FAIL(JOBROOT,"missing_workbase","Work base is required") G EXIT
+ I '$$ENSWORK(WORKBASE,.WERR) D FAIL(JOBROOT,"workdir_failed",$G(WERR("error"),"workdir_failed")) G EXIT
  S JOBID=+$G(OPT("jobid"))
  S BUILD=$$BOOL($G(OPT("build_rebuilt")),1)
  S RTCHECK=$$BOOL($G(OPT("roundtrip")),0)
@@ -313,6 +314,17 @@ PUBLISH(JOBROOT,JOBID) ; optional publish into ^MIO("EFUZY","job") global shape
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"type")=$G(@JOBROOT@("artifact",KEY,"type"))
  . S ^MIO("EFUZY","job",JOBID,"artifact",KEY,"name")=$G(@JOBROOT@("artifact",KEY,"name"))
  Q
+ ;
+ENSWORK(WORKBASE,ERR) ; ensure parent directory for workbase outputs
+ N DIR,I
+ K ERR
+ S DIR=$G(WORKBASE)
+ I DIR="" Q 0
+ F I=$L(DIR):-1:1 Q:$E(DIR,I)="/"
+ I I>1 S DIR=$E(DIR,1,I-1)
+ E  S DIR="."
+ I $T(ENSDIR^EFUZYBOOT)'="" Q $$ENSDIR^EFUZYBOOT(DIR,.ERR)
+ Q 1
  ;
 NL() ; explicit line terminator for stream writes
  Q $C(13,10)

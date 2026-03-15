@@ -27,14 +27,14 @@
           </div>
           <div>
             <label class="mb-2 block stat-label">Profile</label>
-            <select name="profileId" class="select">
+            <select name="profileId" class="select dark:bg-black">
               <option value="">None</option>
               {{#profiles}}<option value="{{id}}" {{selectedAttr}}>{{name}}</option>{{/profiles}}
             </select>
           </div>
           <div>
             <label class="mb-2 block stat-label">Compare mode</label>
-            <select name="compareMode" class="select">
+            <select name="compareMode" class="select dark:bg-black">
               <option value="export_safe" {{job.compareExportSafe}}>Export safe</option>
               <option value="strict" {{job.compareStrict}}>Strict</option>
               <option value="lenient" {{job.compareLenient}}>Lenient</option>

@@ -6,6 +6,10 @@ REG(CONF)
 	N META
 	K META S META("authRequired")=0,META("roles")="operator,admin"
 	D REG1("GET","/efuzy","HOME^EFUZY",.META)
+	D REG1("GET","/efuzy/demo","DEMO^EFUZY",.META)
+	D REG1("POST","/efuzy/demo/signup","DEMOSIGN^EFUZY",.META)
+	D REG1("POST","/efuzy/demo/login","DEMOLOG^EFUZY",.META)
+	D REG1("POST","/efuzy/demo/logout","DEMOOUT^EFUZY",.META)
 	D REG1("GET","/efuzy/workspace","WORKSPACE^EFUZY",.META)
 	D REG1("GET","/efuzy/preview/:jobId","PREVIEW^EFUZY",.META)
 	D REG1("GET","/efuzy/profiles","PROFILES^EFUZY",.META)
@@ -35,120 +39,207 @@ REG1(METHOD,PATH,TARGET,META)
 	S ^MIO("ROUTE","META",$G(METHOD),$G(PATH),"roles")=$G(META("roles"))
 	Q
 	;
-HOME(DEV,CONF,REQ,CTX) D WORKSPACE(.DEV,.CONF,.REQ,.CTX) Q
+HOME(DEV,CONF,REQ,CTX)
+	I $$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D WORKSPACE(.DEV,.CONF,.REQ,.CTX) Q
+	D DEMO(.DEV,.CONF,.REQ,.CTX)
+	Q
+DEMO(DEV,CONF,REQ,CTX)
+	N TCTX,OUT,ERR,STATE
+	K STATE
+	I $$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/workspace") Q
+	D BUILDPAGE^EFUZYAUTH(.CONF,.REQ,.CTX,.STATE,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/efuzy_demo_auth.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
+DEMOSIGN(DEV,CONF,REQ,CTX)
+	N POST,ERR,USERID,SID,HEAD
+	D PARSEFORM(.CONF,.REQ,.POST)
+	I '$$SIGNUP^EFUZYAUTH($G(POST("login")),$G(POST("password")),.CONF,.USERID,.ERR) D AUTHFAIL(.DEV,.CONF,.REQ,.CTX,.POST,$G(ERR("error"))) Q
+	I '$$LOGIN^EFUZYAUTH($G(POST("login")),$G(POST("password")),.CONF,.USERID,.SID,.ERR) D AUTHFAIL(.DEV,.CONF,.REQ,.CTX,.POST,$G(ERR("error"))) Q
+	S HEAD("Content-Type")="text/html; charset=utf-8"
+	S HEAD("Set-Cookie")=$$SESSCOOKIE^EFUZYAUTH(SID)
+	D RESPX^MIOHTTP(.DEV,.CONF,200,.HEAD,$$REDIRHTML^EFUZYAUTH("/efuzy/workspace"),$G(CTX("request_id")),.CTX)
+	Q
+DEMOLOG(DEV,CONF,REQ,CTX)
+	N POST,ERR,USERID,SID,HEAD
+	D PARSEFORM(.CONF,.REQ,.POST)
+	I '$$LOGIN^EFUZYAUTH($G(POST("login")),$G(POST("password")),.CONF,.USERID,.SID,.ERR) D AUTHFAIL(.DEV,.CONF,.REQ,.CTX,.POST,$G(ERR("error"))) Q
+	S HEAD("Content-Type")="text/html; charset=utf-8"
+	S HEAD("Set-Cookie")=$$SESSCOOKIE^EFUZYAUTH(SID)
+	D RESPX^MIOHTTP(.DEV,.CONF,200,.HEAD,$$REDIRHTML^EFUZYAUTH("/efuzy/workspace"),$G(CTX("request_id")),.CTX)
+	Q
+DEMOOUT(DEV,CONF,REQ,CTX)
+	N HEAD
+	D LOGOUT^EFUZYAUTH(.REQ)
+	S HEAD("Content-Type")="text/html; charset=utf-8"
+	S HEAD("Set-Cookie")=$$CLEARCOOKIE^EFUZYAUTH()
+	D RESPX^MIOHTTP(.DEV,.CONF,200,.HEAD,$$REDIRHTML^EFUZYAUTH("/efuzy/demo"),$G(CTX("request_id")),.CTX)
+	Q
+AUTHFAIL(DEV,CONF,REQ,CTX,POST,CODE)
+	N TCTX,OUT,ERR,STATE
+	S STATE("login")=$G(POST("login"))
+	S STATE("error")=$$ERRTEXT^EFUZYAUTH($G(CODE))
+	D BUILDPAGE^EFUZYAUTH(.CONF,.REQ,.CTX,.STATE,.TCTX)
+	D RENDERPAGE^MIOTPL("pages/efuzy_demo_auth.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
+	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(CODE,"auth_failed")) Q
+	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
+	Q
 WORKSPACE(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDWS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_workspace.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 PREVIEW(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR,JOBID S JOBID=$G(REQ("params","jobId"))
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDPREV^EFUZYUI(.CONF,.REQ,.CTX,JOBID,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_preview.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 PROFILES(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDPROFS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_profiles.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 PROFILE(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR,ID S ID=$G(REQ("params","id"))
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDPROF^EFUZYUI(.CONF,.REQ,.CTX,ID,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_profile_edit.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 AUTOMATION(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDAUTO^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_automation.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 JOBPAGE(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR,ID S ID=$G(REQ("params","id"))
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDJOB^EFUZYUI(.CONF,.REQ,.CTX,ID,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_job_detail.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT) Q
 	;
 DOWNLOAD(DEV,CONF,REQ,CTX)
-	N JOBID,ARTKEY,ERR
+	N JOBID,ARTKEY,ERR,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	S JOBID=$G(REQ("params","jobId"))
 	S ARTKEY=$G(REQ("params","artifactKey"))
-	I '$$SENDART(.DEV,.CONF,JOBID,ARTKEY,.CTX,.ERR) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"artifact_not_found"))
+	I '$$SENDART(.DEV,.CONF,JOBID,ARTKEY,.CTX,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"artifact_not_found"))
 	Q
 	;
 APIUPLOAD(DEV,CONF,REQ,CTX)
-	N MP,ERR,FILEID,JOBID,OBJ,PROFILEID
+	N MP,ERR,FILEID,JOBID,OBJ,PROFILEID,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	I '$$PARSE^MIOHTTPMPU(.CONF,.REQ,.MP,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"multipart_parse_failed")) Q
 	S PROFILEID=$G(MP("field","profileId"))
-	I '$$STAGEUPLOAD^EFUZYFS(.CONF,.MP,.FILEID,.ERR) D  Q
+	I '$$STAGEUPLOAD^EFUZYFS(.CONF,.MP,.FILEID,.ERR,UID) D  Q
 	. D FREE^MIOHTTPMPU(.MP)
 	. D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"stage_failed"))
 	D FREE^MIOHTTPMPU(.MP)
-	I '$$CREATEQ^EFUZYJOB(.CONF,FILEID,"837_to_csv","manual",.JOBID,.ERR) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"job_create_failed")) Q
+	I PROFILEID'="",'$$OWNSPROF^EFUZYAUTH(UID,+PROFILEID) S PROFILEID=""
+	I '$$CREATEQ^EFUZYJOB(.CONF,FILEID,"837_to_csv","manual",.JOBID,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"job_create_failed")) Q
 	I PROFILEID'="" S ^MIO("EFUZY","job",JOBID,"profileId")=PROFILEID
 	S OBJ("ok")=1,OBJ("fileId")=FILEID,OBJ("jobId")=JOBID,OBJ("redirect")="/efuzy/preview/"_JOBID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,201,.OBJ,$G(CTX("request_id")),.CTX)
 	Q
 	;
 APIRUN(DEV,CONF,REQ,CTX)
-	N POST,JOBID,ERR,OBJ,PROFILEID
+	N POST,JOBID,ERR,OBJ,PROFILEID,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
 	S JOBID=$G(POST("jobId")),PROFILEID=$G(POST("profileId"))
 	I JOBID="" D RESPERR(.DEV,.CONF,.CTX,400,"job_id_required") Q
-	I PROFILEID'="" S ^MIO("EFUZY","job",JOBID,"profileId")=PROFILEID
+	I '$$OWNSJOB^EFUZYAUTH(UID,+JOBID) D RESPERR(.DEV,.CONF,.CTX,404,"job_not_found") Q
+	I PROFILEID'="" D  I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"))) Q
+	. I '$$OWNSPROF^EFUZYAUTH(UID,+PROFILEID) S ERR("error")="profile_not_found" Q
+	. S ^MIO("EFUZY","job",JOBID,"profileId")=PROFILEID
 	I '$$RUN^EFUWFRUN(.CONF,JOBID,.ERR) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"run_failed")) Q
 	S OBJ("ok")=1,OBJ("jobId")=JOBID,OBJ("redirect")="/efuzy/preview/"_JOBID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX)
 	Q
 JOBS(DEV,CONF,REQ,CTX)
 	N TCTX,OUT,ERR
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D HTMLREDIR(.DEV,.CONF,.CTX,"/efuzy/demo") Q
 	D BUILDJOBS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
 	D RENDERPAGE^MIOTPL("pages/efuzy_jobs.html","layouts/efuzy_layout.html",.CONF,.TCTX,.OUT,.ERR)
 	I $D(ERR) D RESPERR(.DEV,.CONF,.CTX,500,"template_error") Q
 	D RESPHTML(.DEV,.CONF,.CTX,.OUT)
 	Q
 APIJOBS(DEV,CONF,REQ,CTX)
-	N OBJ D LISTJSON^EFUWFHIST(.CONF,.REQ,.OBJ) D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
+	N OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
+	D LISTJSON^EFUWFHIST(.CONF,.REQ,.OBJ,UID)
+	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIJOB(DEV,CONF,REQ,CTX)
-	N OBJ,ID S ID=$G(REQ("params","id")) I '$$GETJSON^EFUWFHIST(.CONF,ID,.OBJ) D RESPERR(.DEV,.CONF,.CTX,404,"job_not_found") Q
+	N OBJ,ID,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
+	S ID=$G(REQ("params","id")) I '$$GETJSON^EFUWFHIST(.CONF,ID,.OBJ,UID) D RESPERR(.DEV,.CONF,.CTX,404,"job_not_found") Q
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIFILES(DEV,CONF,REQ,CTX)
-	N OBJ D LISTFILES^EFUZYFS(.CONF,.OBJ) D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
+	N OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
+	D LISTFILES^EFUZYFS(.CONF,.OBJ,UID)
+	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIEXPORT(DEV,CONF,REQ,CTX)
-	N JOBID,ERR S JOBID=$G(REQ("params","jobId")) I '$$SEND^EFUWFOUT(.DEV,.CONF,JOBID,.CTX,.ERR) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"export_not_found")) Q
+	N JOBID,ERR,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
+	S JOBID=$G(REQ("params","jobId"))
+	I '$$SEND^EFUWFOUT(.DEV,.CONF,JOBID,.CTX,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,404,$G(ERR("error"),"export_not_found")) Q
 	Q
 APIRETRY(DEV,CONF,REQ,CTX)
-	N POST,JOBID,NEWID,ERR,OBJ
+	N POST,JOBID,NEWID,ERR,OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
 	S JOBID=$G(POST("jobId")) I JOBID="" D RESPERR(.DEV,.CONF,.CTX,400,"job_id_required") Q
-	I '$$RETRY^EFUZYJOB(.CONF,JOBID,.NEWID,.ERR) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"retry_failed")) Q
+	I '$$RETRY^EFUZYJOB(.CONF,JOBID,.NEWID,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,500,$G(ERR("error"),"retry_failed")) Q
 	S OBJ("ok")=1,OBJ("jobId")=NEWID,OBJ("redirect")="/efuzy/preview/"_NEWID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIPROFS(DEV,CONF,REQ,CTX)
-	N POST,ID,ERR,OBJ
+	N POST,ID,ERR,OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
-	I '$$SAVE^EFUZYCFG(.CONF,.POST,.ID,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_save_failed")) Q
+	I '$$SAVE^EFUZYCFG(.CONF,.POST,.ID,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_save_failed")) Q
 	S OBJ("ok")=1,OBJ("id")=ID,OBJ("redirect")="/efuzy/profiles/"_ID
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIPROFD(DEV,CONF,REQ,CTX)
-	N POST,ERR,OBJ
+	N POST,ERR,OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
-	I '$$DELPROF^EFUZYCFG(.CONF,$G(POST("id")),.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_delete_failed")) Q
+	I '$$DELPROF^EFUZYCFG(.CONF,$G(POST("id")),.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"profile_delete_failed")) Q
 	S OBJ("ok")=1,OBJ("redirect")="/efuzy/profiles"
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIAUTOS(DEV,CONF,REQ,CTX)
-	N POST,ID,ERR,OBJ
+	N POST,ID,ERR,OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
-	I '$$SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_save_failed")) Q
+	I $G(POST("selectedProfile"))'="",'$$OWNSPROF^EFUZYAUTH(UID,+$G(POST("selectedProfile"))) D RESPERR(.DEV,.CONF,.CTX,404,"profile_not_found") Q
+	I '$$SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_save_failed")) Q
 	S OBJ("ok")=1,OBJ("id")=ID D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 APIAUTOD(DEV,CONF,REQ,CTX)
-	N POST,ERR,OBJ
+	N POST,ERR,OBJ,UID
+	I '$$AUTHREQ^EFUZYAUTH(.REQ,.CTX) D RESPERR(.DEV,.CONF,.CTX,401,"login_required") Q
+	S UID=+$G(CTX("efuzy","userId"))
 	D PARSEFORM(.CONF,.REQ,.POST)
-	I '$$DELAUTO^EFUZYCFG(.CONF,$G(POST("id")),.ERR) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_delete_failed")) Q
+	I '$$DELAUTO^EFUZYCFG(.CONF,$G(POST("id")),.ERR,UID) D RESPERR(.DEV,.CONF,.CTX,400,$G(ERR("error"),"automation_delete_failed")) Q
 	S OBJ("ok")=1 D RESPJSONX^MIOHTTP(.DEV,.CONF,200,.OBJ,$G(CTX("request_id")),.CTX) Q
 	;
 PARSEFORM(CONF,REQ,OUT)
@@ -222,12 +313,18 @@ RESPHTML(DEV,CONF,CTX,OUT)
 RESPERR(DEV,CONF,CTX,STATUS,ERRTXT)
 	N OBJ S OBJ("ok")=0,OBJ("error")=$G(ERRTXT)
 	D RESPJSONX^MIOHTTP(.DEV,.CONF,+$G(STATUS),.OBJ,$G(CTX("request_id")),.CTX) Q
+HTMLREDIR(DEV,CONF,CTX,TARGET)
+	N HEAD
+	S HEAD("Content-Type")="text/html; charset=utf-8"
+	D RESPX^MIOHTTP(.DEV,.CONF,200,.HEAD,$$REDIRHTML^EFUZYAUTH($G(TARGET)),$G(CTX("request_id")),.CTX)
+	Q
 	;
-SENDART(DEV,CONF,JOBID,ARTKEY,CTX,ERR)
+SENDART(DEV,CONF,JOBID,ARTKEY,CTX,ERR,USERID)
 	N PATH,NAME,TYPE,HEAD,KEY
 	K ERR
 	S JOBID=+JOBID
 	I 'JOBID S ERR("error")="job_id_required" Q 0
+	I +$G(USERID)>0,'$$OWNSJOB^EFUZYAUTH(+USERID,JOBID) S ERR("error")="artifact_not_found" Q 0
 	S KEY=$$SAFEKEY($G(ARTKEY))
 	I KEY="" S KEY=$$DEFART(JOBID)
 	I KEY'="",$D(^MIO("EFUZY","job",JOBID,"artifact",KEY)) D
@@ -270,9 +367,9 @@ MIME(TYPE,PATH)
 	I $E($G(PATH),$L($G(PATH))-3,$L($G(PATH)))=".txt" Q "text/plain; charset=utf-8"
 	Q "application/octet-stream"
 	;
-WORKBASE(CONF,JOBID,FILEID,MODE)
+WORKBASE(CONF,JOBID,FILEID,MODE,USERID)
 	N ROOT
-	S ROOT=$$ROOT^EFUZYFS(.CONF)
+	S ROOT=$$ROOT^EFUZYFS(.CONF,+$G(USERID))
 	Q ROOT_"/work/"_$G(MODE)_"-"_$G(JOBID)_"-"_$G(FILEID)
 	;
 GetRoutineList(routine,result)
@@ -284,9 +381,10 @@ GetRoutineList(routine,result)
 	;
 link
 	N R,RTN
-	D GetRoutineList("EFU*",.R)
+	D GetRoutineList("*",.R)
 	N A S A="" F  S A=$O(R(A)) Q:A=""  D
 	. S RTN=A
 	. I $E(RTN)="%" S $E(RTN)="_"
 	. W !,"ZL " ZL RTN_".m" W RTN_".m"
 	Q	
+	;

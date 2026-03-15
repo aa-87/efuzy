@@ -55,7 +55,7 @@
         </div>
         <div>
           <div class="fLabel">Sort</div>
-          <select class="select" name="sort">
+          <select class="select dark:bg-black" name="sort">
             {{#sorts}}
               <option value="{{val}}" {{#isSel}}selected{{/isSel}}>{{label}}</option>
             {{/sorts}}
@@ -63,7 +63,7 @@
         </div>
         <div>
           <div class="fLabel">Per page</div>
-          <select class="select" name="per">
+          <select class="select dark:bg-black" name="per">
             {{#perOpts}}
               <option value="{{val}}" {{#isSel}}selected{{/isSel}}>{{label}}</option>
             {{/perOpts}}
@@ -71,14 +71,14 @@
         </div>
         <div>
           <div class="fLabel">Favorites</div>
-          <select class="select" name="fav">
+          <select class="select dark:bg-black" name="fav">
             <option value="0" {{^filters.fav}}selected{{/filters.fav}}>All</option>
             <option value="1" {{#filters.fav}}selected{{/filters.fav}}>Favorites only</option>
           </select>
         </div>
         <div class="fit">
           <div class="fLabel">View</div>
-          <select class="select" name="view">
+          <select class="select dark:bg-black" name="view">
             <option value="grid" {{#ui.isGrid}}selected{{/ui.isGrid}}>Grid</option>
             <option value="list" {{#ui.isList}}selected{{/ui.isList}}>List</option>
           </select>

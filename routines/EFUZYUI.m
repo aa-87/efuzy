@@ -11,11 +11,12 @@ BUILDWS(CONF,REQ,CTX,TCTX)
 	S TCTX("page","heading")="Workspace"
 	S TCTX("page","lead")="Stage files, inspect recent runs, and move from queued upload to publish-ready X12 837 exports."
 	S TCTX("page","eyebrow")="Operations workbench"
-	D COUNTS(.CONF,.TCTX)
-	D LOADHIST(.CONF,.REQ,.TCTX,10,"recent")
-	D LOADFILES^EFUZYFS(.CONF,8,.TCTX)
-	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
-	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D COUNTS(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
+	D LOADHIST(.CONF,.REQ,.CTX,.TCTX,10,"recent")
+	D LOADFILES^EFUZYFS(.CONF,8,.TCTX,+$G(CTX("efuzy","userId")))
+	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
+	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("files",1)) S TCTX("filesAny")=1
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	I $D(TCTX("automation",1)) S TCTX("automationAny")=1
@@ -32,9 +33,10 @@ BUILDPREV(CONF,REQ,CTX,JOBID,TCTX)
 	S TCTX("page","lead")="Review sampled claims, service lines, diagnostics, and trace before publishing canonical artifacts."
 	S TCTX("page","eyebrow")="Workflow preview"
 	S TCTX("job","id")=+$G(JOBID)
-	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
-	D LOADPREV(.CONF,+$G(JOBID),.TCTX)
+	D LOADPREV(.CONF,+$G(JOBID),.TCTX,+$G(CTX("efuzy","userId")))
 	D PREPXP(.TCTX)
 	D POSTPREV(.TCTX)
 	Q
@@ -47,7 +49,8 @@ BUILDJOBS(CONF,REQ,CTX,TCTX)
 	S TCTX("page","heading")="Job History"
 	S TCTX("page","lead")="Review published workflow runs, filter by status, and open detail pages or artifact downloads."
 	S TCTX("page","eyebrow")="Operational history"
-	D LOADHIST(.CONF,.REQ,.TCTX,50,"jobs")
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADHIST(.CONF,.REQ,.CTX,.TCTX,50,"jobs")
 	Q
 	;
 BUILDPROFS(CONF,REQ,CTX,TCTX)
@@ -58,7 +61,8 @@ BUILDPROFS(CONF,REQ,CTX,TCTX)
 	S TCTX("page","heading")="Export Profiles"
 	S TCTX("page","lead")="Save field sets, column order, delimiter rules, and output naming for biller-friendly CSV exports."
 	S TCTX("page","eyebrow")="Profile catalog"
-	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADMAPS^EFU837EXPMP(.TCTX)
 	D POSTLIST(.TCTX)
@@ -72,7 +76,8 @@ BUILDPROF(CONF,REQ,CTX,ID,TCTX)
 	S TCTX("page","heading")="Profile Editor"
 	S TCTX("page","lead")="Configure export mode, field selection, quoting, headers, and naming without leaving the SSR workspace."
 	S TCTX("page","eyebrow")="Profile design"
-	D LOADPROF^EFUZYCFG(.CONF,ID,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADPROF^EFUZYCFG(.CONF,ID,.TCTX,+$G(CTX("efuzy","userId")))
 	D LOADMAPS^EFU837EXPMP(.TCTX)
 	D MODESEL(.TCTX)
 	D POSTPROF(.TCTX)
@@ -86,8 +91,9 @@ BUILDAUTO(CONF,REQ,CTX,TCTX)
 	S TCTX("page","heading")="Automation"
 	S TCTX("page","lead")="Bind folders, choose a profile, and define success or failure handling for repeatable watched-folder runs."
 	S TCTX("page","eyebrow")="Folder pipelines"
-	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX)
-	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
+	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("automation",1)) S TCTX("automationAny")=1
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D POSTLIST(.TCTX)
@@ -102,9 +108,10 @@ BUILDJOB(CONF,REQ,CTX,ID,TCTX)
 	S TCTX("page","lead")="Inspect artifacts, diagnostics, preview data, and trace rows for a completed or failed job."
 	S TCTX("page","eyebrow")="Published job"
 	S TCTX("job","id")=+$G(ID)
-	D LOADPROFL^EFUZYCFG(.CONF,.TCTX)
+	D WHO(.REQ,.CTX,.TCTX)
+	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
-	D LOADJOB(.CONF,+$G(ID),.TCTX)
+	D LOADJOB(.CONF,+$G(ID),.TCTX,+$G(CTX("efuzy","userId")))
 	D PREPXP(.TCTX)
 	D POSTDETAIL(.TCTX)
 	Q
@@ -143,31 +150,41 @@ ACT(TCTX,KEY)
 	F  S I=$O(TCTX("nav",I)) Q:'I  S TCTX("nav",I,"isActive")=$S($G(TCTX("nav",I,"key"))=$G(KEY):1,1:0)
 	Q
 	;
-COUNTS(CONF,TCTX)
+WHO(REQ,CTX,TCTX)
+	S TCTX("session","isAuthenticated")=$S(+$G(CTX("efuzy","userId"))>0:1,1:0)
+	S TCTX("session","userId")=+$G(CTX("efuzy","userId"))
+	S TCTX("session","login")=$G(CTX("efuzy","login"))
+	S TCTX("session","demoHref")="/efuzy/demo"
+	S TCTX("session","logoutAction")="/efuzy/demo/logout"
+	Q
+	;
+COUNTS(CONF,TCTX,USERID)
 	S TCTX("summarycards",1,"label")="Queued Jobs"
-	S TCTX("summarycards",1,"value")=$$COUNTIDX("queued")
+	S TCTX("summarycards",1,"value")=$$COUNTIDX("queued",+$G(USERID))
 	S TCTX("summarycards",1,"tone")="tone-amber"
 	S TCTX("summarycards",2,"label")="Running Jobs"
-	S TCTX("summarycards",2,"value")=$$COUNTIDX("running")
+	S TCTX("summarycards",2,"value")=$$COUNTIDX("running",+$G(USERID))
 	S TCTX("summarycards",2,"tone")="tone-sky"
 	S TCTX("summarycards",3,"label")="Completed Jobs"
-	S TCTX("summarycards",3,"value")=$$COUNTIDX("completed")
+	S TCTX("summarycards",3,"value")=$$COUNTIDX("completed",+$G(USERID))
 	S TCTX("summarycards",3,"tone")="tone-emerald"
 	S TCTX("summarycards",4,"label")="Staged Files"
-	S TCTX("summarycards",4,"value")=$$FILECOUNT()
+	S TCTX("summarycards",4,"value")=$$FILECOUNT(+$G(USERID))
 	S TCTX("summarycards",4,"tone")="tone-violet"
 	Q
 	;
-COUNTIDX(STATUS)
+COUNTIDX(STATUS,USERID)
 	N C,ID
 	S C=0,ID=0
-	F  S ID=$O(^MIO("EFUZY","idx","job","status",STATUS,ID)) Q:'ID  S C=C+1
+	I +$G(USERID)>0 F  S ID=$O(^MIO("EFUZY","idx","job","ownerStatus",+USERID,STATUS,ID)) Q:'ID  S C=C+1
+	E  F  S ID=$O(^MIO("EFUZY","idx","job","status",STATUS,ID)) Q:'ID  S C=C+1
 	Q C
 	;
-FILECOUNT()
+FILECOUNT(USERID)
 	N C,ID
 	S C=0,ID=0
-	F  S ID=$O(^MIO("EFUZY","file",ID)) Q:'ID  S C=C+1
+	I +$G(USERID)>0 F  S ID=$O(^MIO("EFUZY","idx","owner","file",+USERID,ID)) Q:'ID  S C=C+1
+	E  F  S ID=$O(^MIO("EFUZY","file",ID)) Q:'ID  S C=C+1
 	Q C
 	;
 WORKFLOWS(TCTX)
@@ -182,13 +199,14 @@ WORKFLOWS(TCTX)
 	S TCTX("workflow",3,"tag")="No heavy SPA"
 	Q
 	;
-LOADHIST(CONF,REQ,TCTX,LIMIT,MODE)
+LOADHIST(CONF,REQ,CTX,TCTX,LIMIT,MODE)
 	N ROOT,OPT,RES,N
 	S ROOT=$NA(^TMP($J,"EFUZYUI","history",$H,$R(999999)))
 	S OPT("limit")=+$G(LIMIT)
 	S OPT("status")=$G(REQ("query","status"))
 	S OPT("workflow")=$G(REQ("query","workflow"))
 	S OPT("start_after")=+$G(REQ("query","start_after"))
+	S OPT("ownerId")=+$G(CTX("efuzy","userId"))
 	D HISTORY^EFUX12WEB(ROOT,.OPT,.RES)
 	S TCTX("filter","status")=$G(OPT("status"))
 	S TCTX("filter","workflow")=$G(OPT("workflow"))
@@ -214,24 +232,25 @@ LOADHIST(CONF,REQ,TCTX,LIMIT,MODE)
 	I '$D(TCTX("jobs")),$G(MODE)'="recent" S TCTX("jobsEmpty")=1
 	Q
 	;
-LOADPREV(CONF,JOBID,TCTX)
+LOADPREV(CONF,JOBID,TCTX,USERID)
 	N STATUS,FILEID,INPATH,ROOT,OPT,RES,WORKBASE,LERR
 	I 'JOBID S TCTX("jobMissing")=1 Q
+	I +$G(USERID)>0,'$$OWNSJOB^EFUZYAUTH(+USERID,+JOBID) S TCTX("jobMissing")=1 Q
 	S STATUS=$G(^MIO("EFUZY","job",JOBID,"status"))
 	S FILEID=+$G(^MIO("EFUZY","job",JOBID,"fileId"))
-	S INPATH=$$GETPATH^EFUZYFS(FILEID)
+	S INPATH=$$GETPATH^EFUZYFS(FILEID,+$G(USERID))
 	S TCTX("job","fileId")=FILEID
 	S TCTX("job","inputPath")=INPATH
 	S TCTX("job","status")=STATUS
-	S TCTX("job","fileName")=$$GETNAME^EFUZYFS(FILEID)
+	S TCTX("job","fileName")=$$GETNAME^EFUZYFS(FILEID,+$G(USERID))
 	S TCTX("job","profileId")=+$G(^MIO("EFUZY","job",JOBID,"profileId"))
 	I STATUS="completed"!(STATUS="failed") D  Q
-	. D LOADJOB(.CONF,JOBID,.TCTX)
+	. D LOADJOB(.CONF,JOBID,.TCTX,+$G(USERID))
 	. D TOPUPPREV(JOBID,.TCTX)
 	I INPATH="" S TCTX("jobMissing")=1 Q
 	S ROOT=$NA(^TMP($J,"EFUZYUI","preview",JOBID,$H,$R(999999)))
 	S OPT("trace")=1
-	S WORKBASE=$$WORKBASE^EFUZY(.CONF,JOBID,FILEID,"preview")
+	S WORKBASE=$$WORKBASE^EFUZY(.CONF,JOBID,FILEID,"preview",+$G(USERID))
 	D PREVIEW837^EFUX12WEB(INPATH,WORKBASE,ROOT,.OPT,.RES)
 	I +$G(RES("ok")) D ADAPT(ROOT,.TCTX,JOBID,0)
 	E  D
@@ -244,11 +263,12 @@ LOADPREV(CONF,JOBID,TCTX)
 	D POSTPREV(.TCTX)
 	Q
 	;
-LOADJOB(CONF,JOBID,TCTX)
+LOADJOB(CONF,JOBID,TCTX,USERID)
 	N ROOT,OPT,RES
 	I 'JOBID S TCTX("jobMissing")=1 Q
 	S ROOT=$NA(^TMP($J,"EFUZYUI","detail",JOBID,$H,$R(999999)))
 	S OPT("include_trace")=1
+	S OPT("ownerId")=+$G(USERID)
 	D DETAIL^EFUX12WEB(JOBID,ROOT,.OPT,.RES)
 	I '+$G(RES("ok")),$G(RES("http_status"))=404 S TCTX("jobMissing")=1 Q
 	D ADAPT(ROOT,.TCTX,JOBID,1)
