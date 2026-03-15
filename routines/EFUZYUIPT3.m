@@ -27,8 +27,10 @@ SEED
  D SETSTAT^EFUZYJOB(JOBID,"claimCount",1)
  D SETSTAT^EFUZYJOB(JOBID,"lineCount",1)
  S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"claim_id")="CLM0001"
+ S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"claim_date")="20260301"
  S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"claim_id")="CLM0001"
  S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"procedure_code")="99213"
+ S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"line_service_date")="20260301"
  D FINOK^EFUZYJOB(JOBID)
  Q
  ;
@@ -40,6 +42,7 @@ T890(FAIL) ; profiles page shows seeded defaults and links
  D EQ(.FAIL,"[T890][title]",$G(TCTX("page","title")),"Profiles")
  D EQ(.FAIL,"[T890][has first]",$D(TCTX("profiles",1))>0,1)
  D EQ(.FAIL,"[T890][first href]",$G(TCTX("profiles",1,"href"))["/efuzy/profiles/",1)
+ D EQ(.FAIL,"[T890][onboarding]",$G(TCTX("onboarding","reopenLabel")),"Onboarding")
  Q
  ;
 T900(FAIL) ; preview suggests a profile and exposes samples
@@ -61,6 +64,7 @@ T910(FAIL) ; profile editor default state has catalog and ordering
  D EQ(.FAIL,"[T910][catalog]",$D(TCTX("maps","fields","claim_summary",1))>0,1)
  D EQ(.FAIL,"[T910][selected]",$D(TCTX("profile","selectedFields",1))>0,1)
  D EQ(.FAIL,"[T910][naming rule]",$G(TCTX("profile","outputNamingRule"))["source_base",1)
+ D EQ(.FAIL,"[T910][mobile shell label]",$G(TCTX("shell","menuLabel")),"Open navigation")
  Q
  ;
 EQ(FAIL,LABEL,GOT,EXP)

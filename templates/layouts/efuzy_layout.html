@@ -114,11 +114,69 @@
     .stat-label { font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--muted); }
     .key-val dt { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
     .key-val dd { margin-top:.15rem; font-weight:600; }
+    .shell-backdrop { opacity:0; pointer-events:none; transition:opacity .16s ease; }
+    .shell-backdrop.is-open { opacity:1; pointer-events:auto; }
+    .mobile-sidebar {
+      transform:translateX(-105%);
+      transition:transform .18s ease;
+    }
+    .mobile-sidebar.is-open { transform:translateX(0); }
+    .onboarding-shell {
+      opacity:0; pointer-events:none; transition:opacity .18s ease;
+    }
+    .onboarding-shell.is-open { opacity:1; pointer-events:auto; }
+    .onboarding-card {
+      transform:translateY(10px) scale(.985);
+      transition:transform .18s ease;
+    }
+    .onboarding-shell.is-open .onboarding-card { transform:translateY(0) scale(1); }
+    .tour-chip {
+      border-radius:999px; border:1px solid var(--border); padding:.55rem .9rem; font-size:.78rem; font-weight:700;
+      background:rgba(148,163,184,.06); color:var(--muted);
+    }
+    .tour-chip.is-active { background:rgba(14,165,233,.12); color:#7dd3fc; border-color:rgba(14,165,233,.2); }
+    html[data-theme="light"] .tour-chip.is-active { color:#075985; }
+    .onboarding-step { display:none; }
+    .onboarding-step.is-active { display:block; }
+    .onboarding-progress {
+      height:.45rem; border-radius:999px; overflow:hidden; background:rgba(148,163,184,.12);
+    }
+    .onboarding-progress > span { display:block; height:100%; width:25%; background:linear-gradient(90deg, #67e8f9, #38bdf8); transition:width .18s ease; }
   </style>
 </head>
 <body class="font-sans antialiased">
+  <div class="shell-backdrop fixed inset-0 z-40 bg-slate-950/45 lg:hidden" data-mobile-backdrop></div>
+  <aside class="mobile-sidebar app-sidebar fixed inset-y-0 left-0 z-50 w-[19rem] px-4 py-5 lg:hidden" data-mobile-sidebar>
+    <div class="panel rounded-[1.4rem] p-4">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="section-kicker">{{shell.eyebrow}}</div>
+          <div class="mt-2 text-xl font-semibold tracking-tight">{{app.name}}</div>
+          <div class="mt-1 text-sm muted">{{app.tagline}}</div>
+        </div>
+        <button type="button" class="quick-button" data-close-mobile-nav>Close</button>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="badge badge-sky">{{badges.mvp}}</span>
+        <span class="badge badge-violet">{{badges.arch}}</span>
+      </div>
+    </div>
+    <nav class="mt-4 space-y-2">
+      {{#nav}}
+      <a href="{{href}}" class="nav-link {{#isActive}}active{{/isActive}}">
+        <div class="text-sm font-semibold">{{label}}</div>
+        <div class="mt-1 text-xs muted">{{hint}}</div>
+      </a>
+      {{/nav}}
+    </nav>
+    <div class="panel mt-4 rounded-[1.25rem] p-4 text-sm">
+      <div class="font-semibold">Current scope</div>
+      <div class="mt-2 muted">Preview first. Publish only after claims, diagnostics, and output choices look right.</div>
+    </div>
+  </aside>
+
   <div class="app-shell lg:grid lg:grid-cols-[17rem_1fr]">
-    <aside class="app-sidebar px-4 py-5 lg:sticky lg:top-0 lg:h-screen lg:px-5 lg:py-6">
+    <aside class="app-sidebar hidden px-4 py-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:px-5 lg:py-6">
       <div class="panel rounded-[1.4rem] p-4">
         <div class="section-kicker">{{shell.eyebrow}}</div>
         <div class="mt-2 text-xl font-semibold tracking-tight">{{app.name}}</div>
@@ -141,7 +199,15 @@
         <div class="mt-2 muted">Preview first. Publish only after claims, diagnostics, and output choices look right.</div>
       </div>
     </aside>
+
     <main class="px-4 py-4 lg:px-6 lg:py-6">
+      <div class="mb-4 flex items-center justify-between gap-3 lg:hidden">
+        <button type="button" class="quick-button" data-open-mobile-nav>{{shell.menuLabel}}</button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="themeToggleMobile" class="quick-button">Theme</button>
+        </div>
+      </div>
+
       <header class="panel rounded-[1.5rem] p-4 lg:p-5">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div class="max-w-3xl">
@@ -150,35 +216,190 @@
             <p class="mt-2 text-sm muted lg:text-[0.95rem]">{{page.lead}}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            {{#session.isAuthenticated}}<a href="/efuzy/workspace" class="quick-button">Workspace</a>{{/session.isAuthenticated}}{{^session.isAuthenticated}}<a href="/efuzy/demo" class="quick-button">Demo access</a>{{/session.isAuthenticated}}
-            <a href="/efuzy/jobs" class="quick-button">Jobs</a>
-            <a href="/efuzy/profiles" class="quick-button">Profiles</a>
-            <a href="/efuzy/automation" class="quick-button">Automation</a>
-            {{#session.isAuthenticated}}<span class="badge badge-slate">{{session.login}}</span><form method="post" action="{{session.logoutAction}}" class="inline"><button type="submit" class="ghost-button">Sign out</button></form>{{/session.isAuthenticated}}<button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
+            {{#session.isAuthenticated}}<a href="{{shell.workspaceHref}}" class="quick-button">Workspace</a>{{/session.isAuthenticated}}{{^session.isAuthenticated}}<a href="{{session.demoHref}}" class="quick-button">Demo access</a>{{/session.isAuthenticated}}
+            <a href="{{shell.jobsHref}}" class="quick-button">Jobs</a>
+            <a href="{{shell.profilesHref}}" class="quick-button">Profiles</a>
+            {{#session.isAuthenticated}}<span class="badge badge-slate quick-button gap-2">{{session.login}}</span><form method="post" action="{{session.logoutAction}}" class="inline"><button type="submit" class="ghost-button">Sign out</button></form>{{/session.isAuthenticated}}
+            <button type="button" id="themeToggle" class="quick-button">{{theme.toggleLabel}}</button>
           </div>
         </div>
       </header>
       <div class="mt-6">{{{content}}}</div>
     </main>
   </div>
+
+  <div class="onboarding-shell fixed inset-0 z-[70] bg-slate-950/55 px-4 py-6 sm:px-6" data-onboarding-shell>
+    <div class="mx-auto flex min-h-full max-w-3xl items-center justify-center">
+      <div class="onboarding-card panel w-full rounded-[1.7rem] p-5 lg:p-7">
+        <div class="flex flex-col gap-4 border-b border-slate-500/10 pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div class="max-w-2xl">
+            <div class="section-kicker">Guided setup</div>
+            <h2 class="mt-2 text-xl font-semibold tracking-tight lg:text-2xl">{{onboarding.title}}</h2>
+            <p class="mt-2 text-sm muted">{{onboarding.body}}</p>
+          </div>
+          <button type="button" class="quick-button" data-close-onboarding>{{onboarding.dismissLabel}}</button>
+        </div>
+
+        <div class="mt-5">
+          <div class="onboarding-progress"><span data-onboarding-progress></span></div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            {{#onboarding.step}}
+            <button type="button" class="tour-chip" data-onboarding-jump="{{number}}">Step {{number}}</button>
+            {{/onboarding.step}}
+          </div>
+        </div>
+
+        <div class="mt-5 space-y-4">
+          {{#onboarding.step}}
+          <section class="onboarding-step panel-soft rounded-[1.35rem] p-5" data-onboarding-step="{{number}}">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="badge badge-sky">Step {{number}}</span>
+                <span class="badge badge-slate">{{target}}</span>
+              </div>
+              <div class="text-xs uppercase tracking-[0.18em] muted">{{number}} / {{total}}</div>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold">{{title}}</h3>
+            <p class="mt-2 text-sm muted">{{body}}</p>
+          </section>
+          {{/onboarding.step}}
+        </div>
+
+        <div class="mt-5 flex flex-col gap-3 border-t border-slate-500/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="quick-button" data-onboarding-prev>Back</button>
+            <button type="button" class="primary-button" data-onboarding-next>Next step</button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a href="{{shell.workspaceHref}}" class="quick-button">Open workspace</a>
+            <a href="{{shell.profilesHref}}" class="quick-button">View profiles</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       var root = document.documentElement;
-      var key = 'efuzy-theme';
-      function setTheme(mode) { root.setAttribute('data-theme', mode); try { localStorage.setItem(key, mode); } catch (e) {} }
+      var themeKey = 'efuzy-theme';
+      var onboardingKey = '{{onboarding.storageKey}}' || 'efuzy-onboarding-v2';
+      var mobileSidebar = document.querySelector('[data-mobile-sidebar]');
+      var mobileBackdrop = document.querySelector('[data-mobile-backdrop]');
+      var onboarding = document.querySelector('[data-onboarding-shell]');
+      var autoOnboarding = '{{session.showOnboarding}}' === '1';
+
+      function setTheme(mode) {
+        root.setAttribute('data-theme', mode);
+        try { localStorage.setItem(themeKey, mode); } catch (e) {}
+      }
+
       var saved = null;
-      try { saved = localStorage.getItem(key); } catch (e) {}
+      try { saved = localStorage.getItem(themeKey); } catch (e) {}
       if (!saved) saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       setTheme(saved);
-      var btn = document.getElementById('themeToggle');
-      if (btn) btn.addEventListener('click', function () { setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+
+      function bindThemeToggle(id) {
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+      }
+      bindThemeToggle('themeToggle');
+      bindThemeToggle('themeToggleMobile');
+
+      function openMobileNav() {
+        if (!mobileSidebar || !mobileBackdrop) return;
+        mobileSidebar.classList.add('is-open');
+        mobileBackdrop.classList.add('is-open');
+      }
+      function closeMobileNav() {
+        if (!mobileSidebar || !mobileBackdrop) return;
+        mobileSidebar.classList.remove('is-open');
+        mobileBackdrop.classList.remove('is-open');
+      }
+      document.querySelectorAll('[data-open-mobile-nav]').forEach(function (btn) { btn.addEventListener('click', openMobileNav); });
+      document.querySelectorAll('[data-close-mobile-nav]').forEach(function (btn) { btn.addEventListener('click', closeMobileNav); });
+      if (mobileBackdrop) mobileBackdrop.addEventListener('click', closeMobileNav);
+
+      var onboardingSteps = Array.prototype.slice.call(document.querySelectorAll('[data-onboarding-step]'));
+      var onboardingJump = Array.prototype.slice.call(document.querySelectorAll('[data-onboarding-jump]'));
+      var onboardingProgress = document.querySelector('[data-onboarding-progress]');
+      var onboardingPrev = document.querySelector('[data-onboarding-prev]');
+      var onboardingNext = document.querySelector('[data-onboarding-next]');
+      var onboardingIndex = 0;
+
+      function paintOnboarding() {
+        if (!onboardingSteps.length) return;
+        onboardingSteps.forEach(function (step, idx) {
+          step.classList.toggle('is-active', idx === onboardingIndex);
+        });
+        onboardingJump.forEach(function (btn, idx) {
+          btn.classList.toggle('is-active', idx === onboardingIndex);
+        });
+        if (onboardingProgress) onboardingProgress.style.width = (((onboardingIndex + 1) / onboardingSteps.length) * 100) + '%';
+        if (onboardingPrev) onboardingPrev.disabled = onboardingIndex === 0;
+        if (onboardingPrev) onboardingPrev.style.opacity = onboardingIndex === 0 ? '.5' : '1';
+        if (onboardingNext) onboardingNext.textContent = onboardingIndex === onboardingSteps.length - 1 ? 'Finish walkthrough' : 'Next step';
+      }
+      function setOnboardingStep(idx) {
+        if (!onboardingSteps.length) return;
+        if (idx < 0) idx = 0;
+        if (idx > onboardingSteps.length - 1) idx = onboardingSteps.length - 1;
+        onboardingIndex = idx;
+        paintOnboarding();
+      }
+      function openOnboarding(stepIdx) {
+        if (!onboarding) return;
+        onboarding.classList.add('is-open');
+        setOnboardingStep(typeof stepIdx === 'number' ? stepIdx : onboardingIndex);
+      }
+      function closeOnboarding(persist) {
+        if (!onboarding) return;
+        onboarding.classList.remove('is-open');
+        if (persist !== false) {
+          try { localStorage.setItem(onboardingKey, 'dismissed'); } catch (e) {}
+        }
+      }
+      document.querySelectorAll('[data-open-onboarding]').forEach(function (btn) { btn.addEventListener('click', function () { openOnboarding(0); }); });
+      document.querySelectorAll('[data-close-onboarding]').forEach(function (btn) { btn.addEventListener('click', function () { closeOnboarding(true); }); });
+      onboardingJump.forEach(function (btn, idx) { btn.addEventListener('click', function () { setOnboardingStep(idx); }); });
+      if (onboardingPrev) onboardingPrev.addEventListener('click', function () { setOnboardingStep(onboardingIndex - 1); });
+      if (onboardingNext) onboardingNext.addEventListener('click', function () {
+        if (onboardingIndex >= onboardingSteps.length - 1) { closeOnboarding(true); return; }
+        setOnboardingStep(onboardingIndex + 1);
+      });
+      if (onboarding) {
+        onboarding.addEventListener('click', function (e) {
+          if (e.target === onboarding) closeOnboarding(true);
+        });
+      }
+      paintOnboarding();
+      if (autoOnboarding) openOnboarding(0);
 
       document.querySelectorAll('[data-dropzone]').forEach(function (zone) {
         var input = zone.querySelector('input[type="file"]'); if (!input) return;
-        ['dragenter','dragover'].forEach(function (evt) { zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.add('is-dragover'); }); });
-        ['dragleave','dragend','drop'].forEach(function (evt) { zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.remove('is-dragover'); }); });
-        zone.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) input.files = e.dataTransfer.files; });
-        zone.addEventListener('click', function (e) { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') input.click(); });
+        ['dragenter','dragover'].forEach(function (evt) {
+          zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.add('is-dragover');
+          });
+        });
+        ['dragleave','dragend','drop'].forEach(function (evt) {
+          zone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('is-dragover');
+          });
+        });
+        zone.addEventListener('drop', function (e) {
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) input.files = e.dataTransfer.files;
+        });
+        zone.addEventListener('click', function (e) {
+          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') input.click();
+        });
       });
 
       document.querySelectorAll('[data-api-form]').forEach(function (form) {
@@ -288,7 +509,7 @@
           var modeVal = modeSource ? (modeSource.value || 'claim_summary') : 'claim_summary';
           var txt = naming.value || (tokenBase + '.csv');
           txt = txt.split(tokenBase).join(sourceBase);
-          txt = txt.split(tokenTs).join('20260314-120000');
+          txt = txt.split(tokenTs).join('20260315-120000');
           txt = txt.split(tokenJob).join('preview');
           txt = txt.split(tokenMode).join(modeVal);
           namingPreview.textContent = txt;

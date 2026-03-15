@@ -93,19 +93,26 @@ STALE(ISO,DAYS)
  Q $S(DAY']CUT:1,1:0)
  ;
 DELFILE(PATH,ROOT)
- N CMD
+ N $ETRAP,$ESTACK
  I $G(PATH)="" Q 1
  I '$$SAFEPATH(PATH,ROOT) Q 0
  I '$$FEX(PATH) Q 1
- S CMD="rm -f '"_$TR(PATH,"'","''")_"'"
- ZSY CMD
+ S $ETRAP="SET $ECODE="""" QUIT"
+ O PATH:(readonly):1 E  G DELFILEZ
+ C PATH:DELETE
+ I '$$FEX(PATH) Q 1
+DELFILEZ ZSY "rm -f '"_$TR(PATH,"'","''")_"'"
  Q $S($$FEX(PATH):0,1:1)
  ;
 DELDIR(PATH,ROOT)
  N CMD
  I $G(PATH)="" Q 1
  I '$$SAFEPATH(PATH,ROOT) Q 0
- S CMD="rmdir '"_$TR(PATH,"'","''")_"' 2>/dev/null || rm -rf '"_$TR(PATH,"'","''")_"'"
+ I '$$DIREX(PATH) Q 1
+ S CMD="rmdir '"_$TR(PATH,"'","''")_"'"
+ ZSY CMD
+ I '$$DIREX(PATH) Q 1
+ S CMD="rm -rf '"_$TR(PATH,"'","''")_"'"
  ZSY CMD
  Q $S($$DIREX(PATH):0,1:1)
  ;

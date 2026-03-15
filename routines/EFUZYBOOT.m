@@ -8,11 +8,6 @@ ENSURE(CONF,RES) ; ensure runtime defaults, checks, and directories
  S OK=1
  S RES("routine")="EFUZYBOOT"
  D NORMALIZE(.CONF,.RES,.OK)
- D CHECKENV(.CONF,.CRES)
- M RES("checkenv")=CRES
- I '+$G(CRES("ok")) D
- . S OK=0
- . I $G(RES("error"))="" S RES("error")=$S($G(CRES("error"))'="":$G(CRES("error")),1:"checkenv_failed")
  D DIRS(.CONF,.DRES)
  M RES("dirs")=DRES
  I '+$G(DRES("ok")) D
@@ -23,6 +18,11 @@ ENSURE(CONF,RES) ; ensure runtime defaults, checks, and directories
  I '+$G(IRES("ok")) D
  . S OK=0
  . I $G(RES("error"))="" S RES("error")=$S($G(IRES("error"))'="":$G(IRES("error")),1:"install_id_failed")
+ D CHECKENV(.CONF,.CRES)
+ M RES("checkenv")=CRES
+ I '+$G(CRES("ok")) D
+ . S OK=0
+ . I $G(RES("error"))="" S RES("error")=$S($G(CRES("error"))'="":$G(CRES("error")),1:"checkenv_failed")
  D STATUS^EFUZYLIC(.CONF,.LRES)
  M RES("license")=LRES
  I '+$G(LRES("ok")) D
@@ -158,7 +158,7 @@ ENSDIR(PATH,ERR) ; mkdir -p + probe write
  O PROBE:(newversion:stream:nowrap:writeonly):1 E  D  Q 0
  . S ERR("error")="mkdir_failed"
  U PROBE W "ok" C PROBE
- ZSY "rm -f '"_$TR(PROBE,"'","''")_"'"
+ D DEL1(PROBE)
  Q 1
  ;
 SETCHK(RES,NAME,OK,INFO)
@@ -183,4 +183,15 @@ NORM(PATH)
  I $E(P,1,2)="./" S P=$E(P,3,$L(P))
  F  Q:$E(P,$L(P))'="/"  S P=$E(P,1,$L(P)-1) Q:P=""
  Q P
+ ;
+DEL1(PATH)
+ N $ETRAP,$ESTACK
+ I $G(PATH)="" Q
+ I $ZSEARCH(PATH)="" Q
+ S $ETRAP="SET $ECODE="""" QUIT"
+ O PATH:(readonly):1 E  G DEL1Z
+ C PATH:DELETE
+ I $ZSEARCH(PATH)="" Q
+DEL1Z ZSY "rm -f '"_$TR(PATH,"'","''")_"'"
+ Q
  ;

@@ -1,0 +1,152 @@
+<section class="desktop-page space-y-4">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    {{#summarycards}}
+    <div class="panel rounded-[1.3rem] p-4 {{tone}}">
+      <div class="stat-label">{{label}}</div>
+      <div class="mt-3 text-2xl font-semibold">{{value}}</div>
+    </div>
+    {{/summarycards}}
+  </div>
+
+  <div class="desktop-surface rounded-[1.65rem] p-4 md:p-5">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div class="section-kicker">{{desktop.surfaceTitle}}</div>
+        <h2 class="mt-2 text-xl font-semibold text-white">Virtual folders</h2>
+        <p class="mt-2 max-w-3xl text-sm text-slate-100/85">{{desktop.surfaceLead}}</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="/efuzy/automation" class="quick-button">Manage automation</a>
+        <a href="/efuzy/profiles" class="quick-button">Profiles</a>
+        <a href="/efuzy/workspace" class="quick-button">Classic workspace</a>
+      </div>
+    </div>
+
+    <div class="mt-4 grid gap-4 xl:grid-cols-[1.45fr_.95fr]">
+      <div class="desktop-window-grid">
+        {{#automationAny}}
+        {{#automation}}
+        <div class="window desktop-window" id="{{windowId}}">
+          <div class="title-bar">
+            <div class="title-bar-text">{{name}}</div>
+          </div>
+          <div class="window-body space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold">{{summaryText}}</div>
+                <div class="mt-1 text-xs muted">Naming rule: {{namingRule}}</div>
+                <div class="mt-1 text-xs muted">On success {{onSuccess}} · On failure {{onFailure}} · Overwrite {{overwriteMode}}</div>
+              </div>
+              <span class="badge {{enabledTone}}">{{enabledLabel}}</span>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              {{#folder}}
+              {{#isDrop}}
+              <div class="folder-tile folder-drop" data-automation-drop data-automation-id="{{automationId}}" data-profile-id="{{profileId}}">
+                <input type="file" class="hidden" data-automation-input accept="{{accept}}">
+                <div>
+                  <div class="folder-glyph {{key}}"></div>
+                  <div class="mt-4 text-sm font-semibold">{{label}}</div>
+                  <div class="mt-1 text-xs muted">{{desc}}</div>
+                </div>
+                <div>
+                  <div class="rounded-xl bg-slate-900/5 px-3 py-2 text-xs font-semibold text-slate-700" data-drop-status>{{dropLabel}}</div>
+                  <div class="mt-2 text-xs muted break-all">{{path}}</div>
+                </div>
+              </div>
+              {{/isDrop}}
+              {{^isDrop}}
+              <div class="folder-tile">
+                <div>
+                  <div class="folder-glyph {{key}}"></div>
+                  <div class="mt-4 text-sm font-semibold">{{label}}</div>
+                  <div class="mt-1 text-xs muted">{{desc}}</div>
+                </div>
+                <div>
+                  <span class="badge badge-slate">{{badge}}</span>
+                  <div class="mt-2 text-xs muted break-all">{{path}}</div>
+                </div>
+              </div>
+              {{/isDrop}}
+              {{/folder}}
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-500/10 pt-3 text-xs muted">
+              <div>Profile <a href="{{profileHref}}" class="font-semibold text-sky-700 hover:underline">{{selectedProfileName}}</a></div>
+              <div>Workflow {{workflowType}}</div>
+            </div>
+          </div>
+        </div>
+        {{/automation}}
+        {{/automationAny}}
+
+        {{#desktop.empty}}
+        <div class="window desktop-window">
+          <div class="title-bar"><div class="title-bar-text">No automation mapped</div></div>
+          <div class="window-body">
+            <p class="text-sm">Create at least one watched-folder rule to light up the desktop folders.</p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <a href="/efuzy/automation" class="quick-button">Create automation</a>
+              <a href="/efuzy/profiles" class="quick-button">Open profiles</a>
+            </div>
+          </div>
+        </div>
+        {{/desktop.empty}}
+      </div>
+
+      <div class="space-y-4">
+        <div class="window desktop-window">
+          <div class="title-bar"><div class="title-bar-text">Recent jobs</div></div>
+          <div class="window-body">
+            {{#recentAny}}
+            <div class="space-y-2">
+              {{#recentJobs}}
+              <a href="{{href}}" class="block rounded-xl border border-slate-500/10 px-3 py-3 transition hover:bg-slate-500/5">
+                <div class="flex items-center justify-between gap-2"><div class="text-sm font-semibold">Job #{{jobid}}</div><span class="badge {{statusTone}}">{{statusLabel}}</span></div>
+                <div class="mt-1 text-xs muted">{{workflow}} · {{claims}} claims · {{lines}} lines</div>
+              </a>
+              {{/recentJobs}}
+            </div>
+            {{/recentAny}}
+            {{#recentEmpty}}<p class="text-sm muted">No recent jobs yet.</p>{{/recentEmpty}}
+          </div>
+        </div>
+
+        <div class="window desktop-window">
+          <div class="title-bar"><div class="title-bar-text">Staged files</div></div>
+          <div class="window-body">
+            {{#filesAny}}
+            <div class="space-y-2">
+              {{#files}}
+              <div class="rounded-xl border border-slate-500/10 px-3 py-3">
+                <div class="text-sm font-semibold">{{name}}</div>
+                <div class="mt-1 text-xs muted">File {{id}} · {{sizeText}}</div>
+              </div>
+              {{/files}}
+            </div>
+            {{/filesAny}}
+            {{#filesEmpty}}<p class="text-sm muted">No staged files.</p>{{/filesEmpty}}
+          </div>
+        </div>
+
+        <div class="window desktop-window">
+          <div class="title-bar"><div class="title-bar-text">Profiles</div></div>
+          <div class="window-body">
+            {{#profilesAny}}
+            <div class="space-y-2">
+              {{#profiles}}
+              <a href="{{href}}" class="block rounded-xl border border-slate-500/10 px-3 py-3 transition hover:bg-slate-500/5">
+                <div class="flex items-center justify-between gap-2"><div class="text-sm font-semibold">{{name}}</div><span class="badge badge-violet">{{modeLabel}}</span></div>
+                <div class="mt-1 text-xs muted">{{fieldCount}} fields · {{delimiter}} delimiter</div>
+              </a>
+              {{/profiles}}
+            </div>
+            {{/profilesAny}}
+            {{#profilesEmpty}}<p class="text-sm muted">No saved profiles.</p>{{/profilesEmpty}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

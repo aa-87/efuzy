@@ -243,13 +243,28 @@ LOADAUTOS(CONF,TCTX,USERID)
 	Q
 	;
 AUTOCTX(ID,TCTX,N)
+	N PID
 	S TCTX("automation",N,"id")=ID
 	S TCTX("automation",N,"name")=$G(^MIO("EFUZY","cfg","auto",ID,"name"))
 	S TCTX("automation",N,"workflowType")=$G(^MIO("EFUZY","cfg","auto",ID,"workflowType"))
 	S TCTX("automation",N,"inputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"inputFolder"))
 	S TCTX("automation",N,"outputFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"outputFolder"))
-	S TCTX("automation",N,"selectedProfile")=$G(^MIO("EFUZY","cfg","auto",ID,"selectedProfile"))
+	S TCTX("automation",N,"archiveFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"archiveFolder"))
+	S TCTX("automation",N,"errorFolder")=$G(^MIO("EFUZY","cfg","auto",ID,"errorFolder"))
+	S TCTX("automation",N,"namingRule")=$G(^MIO("EFUZY","cfg","auto",ID,"namingRule"))
+	S TCTX("automation",N,"onSuccess")=$G(^MIO("EFUZY","cfg","auto",ID,"onSuccess"))
+	S TCTX("automation",N,"onFailure")=$G(^MIO("EFUZY","cfg","auto",ID,"onFailure"))
+	S TCTX("automation",N,"overwriteMode")=$G(^MIO("EFUZY","cfg","auto",ID,"overwriteMode"))
+	S PID=+$G(^MIO("EFUZY","cfg","auto",ID,"selectedProfile"))
+	S TCTX("automation",N,"selectedProfile")=PID
+	S TCTX("automation",N,"selectedProfileName")=$G(^MIO("EFUZY","cfg","profile",PID,"name"))
+	S TCTX("automation",N,"profileHref")=$S(PID>0:"/efuzy/profiles/"_PID,1:"/efuzy/profiles")
+	S TCTX("automation",N,"profileAny")=$S(PID>0:1,1:0)
+	I $G(TCTX("automation",N,"selectedProfileName"))="" S TCTX("automation",N,"selectedProfileName")="No profile"
 	S TCTX("automation",N,"enabled")=$S(+$G(^MIO("EFUZY","cfg","auto",ID,"enabled")):1,1:0)
+	S TCTX("automation",N,"enabledLabel")=$S($G(TCTX("automation",N,"enabled")):"Enabled",1:"Disabled")
+	S TCTX("automation",N,"enabledTone")=$S($G(TCTX("automation",N,"enabled")):"badge-emerald",1:"badge-slate")
+	S TCTX("automation",N,"href")="/efuzy/automation"
 	Q
 	;
 DELAUTO(CONF,ID,ERR,USERID)

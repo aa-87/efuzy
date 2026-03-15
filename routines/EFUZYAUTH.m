@@ -97,13 +97,18 @@ CURUSER(REQ,USER)
 	S USER("sessionId")=SID
 	S USER("userId")=UID
 	S USER("login")=$G(^MIO("EFUZY","auth","user",UID,"login"))
+	I $G(^MIO("EFUZY","auth","user",UID,"onboardingSeenAt"))="" D
+	. S USER("showOnboarding")=1
+	. S ^MIO("EFUZY","auth","user",UID,"onboardingSeenAt")=NOW
 	Q 1
 	;
 SETCTX(REQ,CTX,USER)
 	S REQ("efuzy","userId")=+$G(USER("userId"))
 	S REQ("efuzy","login")=$G(USER("login"))
+	S REQ("efuzy","showOnboarding")=+$G(USER("showOnboarding"))
 	S CTX("efuzy","userId")=+$G(USER("userId"))
 	S CTX("efuzy","login")=$G(USER("login"))
+	S CTX("efuzy","showOnboarding")=+$G(USER("showOnboarding"))
 	Q
 	;
 AUTHREQ(REQ,CTX)
@@ -186,7 +191,7 @@ BUILDPAGE(CONF,REQ,CTX,STATE,TCTX)
 	S TCTX("auth","note",1,"title")="Evaluation only"
 	S TCTX("auth","note",1,"body")="Do not upload production PHI. The public demo is for product evaluation only."
 	S TCTX("auth","note",2,"title")="User isolation"
-	S TCTX("auth","note",2,"body")="Uploaded files, jobs, profiles, and automation settings are scoped to the signed-in demo user."
+	S TCTX("auth","note",2,"body")="Uploaded files, jobs, and profiles are scoped to the signed-in demo user."
 	S TCTX("auth","note",3,"title")="What happens next"
 	S TCTX("auth","note",3,"body")="After sign-in, the workspace opens and saves your demo activity under your account."
 	I $G(STATE("error"))'="" S TCTX("state","errorAny")=1,TCTX("state","error")=$G(STATE("error"))

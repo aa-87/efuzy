@@ -79,8 +79,7 @@ TEMPCHK(CONF,RES)
  . S RES("error")="temp_probe_open_failed"
  U DEV W "ready"
  C DEV
- S CMD="rm -f '"_$TR(PATH,"'","''")_"'"
- ZSY CMD
+ D DEL1(PATH)
  S RES("ok")=$S($$FEX(PATH):0,1:1)
  I 'RES("ok") S RES("error")="temp_probe_delete_failed"
  Q:$Q +$G(RES("ok")) Q
@@ -102,6 +101,17 @@ DIREX(PATH)
  ;
 FEX(PATH)
  Q $S($ZSEARCH($G(PATH))'="":1,1:0)
+ ;
+DEL1(PATH)
+ N $ETRAP,$ESTACK
+ I $G(PATH)="" Q
+ I '$$FEX(PATH) Q
+ S $ETRAP="SET $ECODE="""" QUIT"
+ O PATH:(readonly):1 E  G DEL1Z
+ C PATH:DELETE
+ I '$$FEX(PATH) Q
+DEL1Z ZSY "rm -f '"_$TR(PATH,"'","''")_"'"
+ Q
  ;
 ISSAFEP(PATH,ROOT)
  N P,R

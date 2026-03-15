@@ -1,5 +1,5 @@
 <section class="space-y-6">
-  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     {{#summarycards}}
     <div class="panel rounded-[1.35rem] p-4 {{tone}}">
       <div class="stat-label">{{label}}</div>
@@ -8,7 +8,7 @@
     {{/summarycards}}
   </div>
 
-  <div class="grid gap-6 xl:grid-cols-[1.22fr_.78fr]">
+  <div class="grid gap-6 xl:grid-cols-[1.18fr_.82fr]">
     <div class="space-y-6">
       <div class="panel rounded-[1.5rem] p-5 lg:p-6">
         <div class="grid gap-6 xl:grid-cols-[1.02fr_.98fr]">
@@ -36,9 +36,10 @@
               <div class="panel-soft rounded-2xl p-4"><dt>Step 3</dt><dd>Publish</dd></div>
             </dl>
           </div>
+
           <form class="space-y-4" action="/efuzy/api/upload" method="post" enctype="multipart/form-data" data-api-form>
             <div class="dropzone rounded-[1.35rem] border-2 border-dashed border-sky-400/45 p-5 panel-soft" data-dropzone>
-              <div class="flex items-start justify-between gap-4">
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div class="text-base font-semibold">Drop file or click to browse</div>
                   <p class="mt-1 text-sm muted">Creates a queued job and opens Preview.</p>
@@ -54,28 +55,31 @@
                     {{#profiles}}<option value="{{id}}">{{name}}</option>{{/profiles}}
                   </select>
                 </div>
-                <div class="panel-soft rounded-2xl p-4 text-sm">
-                  <div class="font-semibold">Automation</div>
-                  <div class="mt-1 muted">Use watched folders after the file shape is verified.</div>
+                <div class="panel-soft rounded-2xl p-4 text-sm hidden">
+                  <div class="flex items-center justify-between gap-3"><div class="font-semibold">Guided first run</div><span class="badge badge-sky">4 steps</span></div>
+                  <div class="mt-1 muted">Launch the interactive walkthrough for a guided stage, review, and publish flow.</div>
+                  <button type="button" class="quick-button mt-3" data-open-onboarding>{{onboarding.primaryLabel}}</button>
                 </div>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-3">
               <button class="primary-button">Stage file</button>
               <a href="/efuzy/profiles" class="quick-button">Profiles</a>
-              <a href="/efuzy/automation" class="quick-button">Automation</a>
+              <a href="/efuzy/jobs" class="quick-button">Job history</a>
             </div>
           </form>
         </div>
       </div>
 
       <div class="panel rounded-[1.5rem] p-5">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div class="section-kicker">Recent activity</div>
             <h2 class="mt-2 text-lg font-semibold">Jobs</h2>
           </div>
-          <a class="quick-button" href="/efuzy/jobs">All jobs</a>
+          <div class="flex flex-wrap gap-2">
+            <a class="quick-button" href="/efuzy/jobs">All jobs</a>
+          </div>
         </div>
         {{#recentAny}}
         <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10">
@@ -110,6 +114,22 @@
 
     <div class="space-y-6">
       <div class="panel rounded-[1.5rem] p-5">
+        <div class="section-kicker">Workspace guide</div>
+        <h2 class="mt-2 text-lg font-semibold">First-run checklist</h2>
+        <div class="mt-4 space-y-3">
+          {{#onboarding.step}}
+          <div class="panel-soft rounded-2xl p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3"><span class="badge badge-sky">Step {{number}}</span><div class="font-semibold">{{title}}</div></div>
+              <span class="badge badge-slate">{{target}}</span>
+            </div>
+            <div class="mt-2 text-sm muted">{{body}}</div>
+          </div>
+          {{/onboarding.step}}
+        </div>
+      </div>
+
+      <div class="panel rounded-[1.5rem] p-5">
         <div class="section-kicker">Current scope</div>
         <h2 class="mt-2 text-lg font-semibold">Workflows</h2>
         <div class="mt-4 space-y-3">
@@ -128,7 +148,7 @@
         <div class="mt-4 space-y-3">
           {{#files}}
           <div class="panel-soft rounded-2xl p-4">
-            <div class="flex items-start justify-between gap-3"><div><div class="font-semibold">{{name}}</div><div class="mt-1 text-sm muted">File {{id}} · {{sizeText}}</div></div><span class="badge badge-slate">Staged</span></div>
+            <div class="flex items-start justify-between gap-3"><div><div class="font-semibold break-all">{{name}}</div><div class="mt-1 text-sm muted">File {{id}} · {{sizeText}}</div></div><span class="badge badge-slate">Staged</span></div>
           </div>
           {{/files}}
         </div>
@@ -142,28 +162,13 @@
         <div class="mt-4 space-y-3">
           {{#profiles}}
           <a href="{{href}}" class="block panel-soft rounded-2xl p-4 transition hover:-translate-y-[1px]">
-            <div class="flex items-center justify-between gap-3"><div class="font-semibold">{{name}}</div><span class="badge badge-sky">{{modeLabel}}</span></div>
+            <div class="flex items-center justify-between gap-3"><div class="font-semibold break-all">{{name}}</div><span class="badge badge-sky">{{modeLabel}}</span></div>
             <div class="mt-2 text-sm muted">{{fieldCount}} fields · {{delimiter}} delimiter</div>
           </a>
           {{/profiles}}
         </div>
         {{/profilesAny}}
         {{#profilesEmpty}}<p class="mt-4 text-sm muted">No profiles saved.</p>{{/profilesEmpty}}
-      </div>
-
-      <div class="panel rounded-[1.5rem] p-5">
-        <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">Automation</h2><a class="quick-button" href="/efuzy/automation">Open</a></div>
-        {{#automationAny}}
-        <div class="mt-4 space-y-3">
-          {{#automation}}
-          <div class="panel-soft rounded-2xl p-4">
-            <div class="flex items-center justify-between gap-3"><div class="font-semibold">{{name}}</div><span class="badge {{enabledTone}}">{{enabledLabel}}</span></div>
-            <div class="mt-2 text-sm muted">{{workflowType}} · {{inputFolder}}</div>
-          </div>
-          {{/automation}}
-        </div>
-        {{/automationAny}}
-        {{#automationEmpty}}<p class="mt-4 text-sm muted">No rules saved.</p>{{/automationEmpty}}
       </div>
     </div>
   </div>

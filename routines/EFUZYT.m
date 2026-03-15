@@ -56,7 +56,7 @@ SEED
  D SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR)
  Q
  ;
-T001 ; workspace context includes summaries files jobs profiles automation
+T001 ; workspace context includes summaries files jobs profiles and onboarding
  N CONF,REQ,CTX,TCTX
  D RESET^EFUZYTESTU("")
  D SEED
@@ -66,7 +66,9 @@ T001 ; workspace context includes summaries files jobs profiles automation
  D EQ^MIOTASSERT($G(TCTX("summarycards",3,"value")),1,"[T001][completed count]")
  D EQ^MIOTASSERT($G(TCTX("files",1,"name")),"demo.837","[T001][file]")
  D OK^MIOTASSERT($D(TCTX("profiles",1))>0,"[T001][profiles loaded]")
- D OK^MIOTASSERT($D(TCTX("automation",1))>0,"[T001][automation loaded]")
+ D EQ^MIOTASSERT($O(TCTX("nav",""),-1),3,"[T001][nav count]")
+ D EQ^MIOTASSERT($G(TCTX("workflow",3,"name")),"Saved export profiles","[T001][workflow card]")
+ D EQ^MIOTASSERT($G(TCTX("onboarding","step",1,"title")),"Stage an 837 file","[T001][onboarding]")
  Q
  ;
 T002 ; preview context includes claims and lines
@@ -78,6 +80,8 @@ T002 ; preview context includes claims and lines
  D EQ^MIOTASSERT($G(TCTX("job","id")),1,"[T002][job id]")
  D EQ^MIOTASSERT($G(TCTX("preview","claims",1,"claim_id")),"CLM0001","[T002][claim preview]")
  D EQ^MIOTASSERT($G(TCTX("preview","lines",1,"procedure_code")),"99213","[T002][line preview]")
+ D EQ^MIOTASSERT($G(TCTX("preview","claims",1,"date_of_service")),"20260301","[T002][claim dos]")
+ D EQ^MIOTASSERT($G(TCTX("preview","lines",1,"date_of_service")),"20260301","[T002][line dos]")
  Q
  ;
 T003 ; profiles and profile editor contexts
@@ -92,15 +96,15 @@ T003 ; profiles and profile editor contexts
  D EQ^MIOTASSERT($G(TCTX("profile","exportMode")),"claim_summary","[T003][new profile mode]")
  Q
  ;
-T004 ; automation and job detail contexts
+T004 ; job detail keeps preview and authenticated first-login onboarding context
  N CONF,REQ,CTX,TCTX
  D RESET^EFUZYTESTU("")
  D SEED
- D BUILDAUTO^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
- D EQ^MIOTASSERT($G(TCTX("nav",4,"isActive")),1,"[T004][automation active]")
- D EQ^MIOTASSERT($G(TCTX("automation",1,"name")),"Auto One","[T004][automation name]")
+ S CTX("efuzy","userId")=1,CTX("efuzy","login")="demo",CTX("efuzy","showOnboarding")=1
  D BUILDJOB^EFUZYUI(.CONF,.REQ,.CTX,1,.TCTX)
  D EQ^MIOTASSERT($G(TCTX("job","status")),"completed","[T004][job status]")
  D EQ^MIOTASSERT($G(TCTX("preview","claims",1,"claim_id")),"CLM0001","[T004][job preview]")
+ D EQ^MIOTASSERT($G(TCTX("onboarding","reopenLabel")),"Onboarding","[T004][onboarding label]")
+ D EQ^MIOTASSERT(+$G(TCTX("session","showOnboarding")),1,"[T004][auto onboarding flag]")
  Q
  ;

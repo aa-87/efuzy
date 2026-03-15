@@ -30,25 +30,29 @@ SEED
  D SETSTAT^EFUZYJOB(JOBID,"claimCount",1)
  D SETSTAT^EFUZYJOB(JOBID,"lineCount",1)
  S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"claim_id")="CLM0001"
+ S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"claim_date")="20260301"
  S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"patient_last")="DOE"
  S ^MIO("EFUZY","job",JOBID,"wrk","claim",1,"patient_first")="JANE"
  S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"claim_id")="CLM0001"
  S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"line_number")="1"
  S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"procedure_code")="99213"
+ S ^MIO("EFUZY","job",JOBID,"wrk","line",1,"line_service_date")="20260301"
  D FINOK^EFUZYJOB(JOBID)
  S POST("name")="Night Job"
  S POST("inputFolder")="/in"
  D SAVEAUTO^EFUZYCFG(.CONF,.POST,.ID,.ERR)
  Q
  ;
-T850(FAIL) ; workspace empty state and active nav
+T850(FAIL) ; workspace empty state, onboarding, and trimmed nav
  N CONF,REQ,CTX,TCTX
  D RESET^EFUZYTESTU("")
  D BUILDWS^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
  D EQ(.FAIL,"[T850][title]",$G(TCTX("page","title")),"Workspace")
  D EQ(.FAIL,"[T850][nav active]",+$G(TCTX("nav",1,"isActive")),1)
+ D EQ(.FAIL,"[T850][nav count]",$O(TCTX("nav",""),-1),3)
  D EQ(.FAIL,"[T850][files empty]",+$G(TCTX("filesEmpty")),1)
  D EQ(.FAIL,"[T850][recent empty]",+$G(TCTX("recentEmpty")),1)
+ D EQ(.FAIL,"[T850][onboarding]",$G(TCTX("onboarding","reopenLabel")),"Onboarding")
  Q
  ;
 T860(FAIL) ; preview page includes claim and line samples
@@ -59,6 +63,8 @@ T860(FAIL) ; preview page includes claim and line samples
  D EQ(.FAIL,"[T860][title]",$G(TCTX("page","title")),"Preview")
  D EQ(.FAIL,"[T860][claim]",$G(TCTX("preview","claims",1,"claim_id")),"CLM0001")
  D EQ(.FAIL,"[T860][line]",$G(TCTX("preview","lines",1,"procedure_code")),"99213")
+ D EQ(.FAIL,"[T860][claim dos]",$G(TCTX("preview","claims",1,"date_of_service")),"20260301")
+ D EQ(.FAIL,"[T860][line dos]",$G(TCTX("preview","lines",1,"date_of_service")),"20260301")
  D EQ(.FAIL,"[T860][job id]",+$G(TCTX("job","id")),1)
  Q
  ;
@@ -76,18 +82,16 @@ T870(FAIL) ; profiles list and editor expose maps and defaults
  D EQ(.FAIL,"[T870][selected token]",$G(TCTX("profile","selectedFields",1,"name")),"claim_id")
  Q
  ;
-T880(FAIL) ; automation and job detail expose seeded data
+T880(FAIL) ; job detail exposes seeded data and keeps guided labels
  N CONF,REQ,CTX,TCTX
  D RESET^EFUZYTESTU("")
  D SEED
- D BUILDAUTO^EFUZYUI(.CONF,.REQ,.CTX,.TCTX)
- D EQ(.FAIL,"[T880][automation active]",+$G(TCTX("nav",4,"isActive")),1)
- D EQ(.FAIL,"[T880][automation row]",$G(TCTX("automation",1,"name")),"Night Job")
  D BUILDJOB^EFUZYUI(.CONF,.REQ,.CTX,1,.TCTX)
  D EQ(.FAIL,"[T880][job title]",$G(TCTX("page","title")),"Job Detail")
  D EQ(.FAIL,"[T880][job status]",$G(TCTX("job","status")),"completed")
  D EQ(.FAIL,"[T880][warning]",$G(TCTX("diagnostic","warning",1,"msg")),"warning one")
  D EQ(.FAIL,"[T880][warning count]",+$G(TCTX("summaryData","warnings")),1)
+ D EQ(.FAIL,"[T880][guided label]",$G(TCTX("onboarding","primaryLabel")),"Show walkthrough")
  Q
  ;
 EQ(FAIL,LABEL,GOT,EXP)

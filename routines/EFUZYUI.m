@@ -16,12 +16,11 @@ BUILDWS(CONF,REQ,CTX,TCTX)
 	D LOADHIST(.CONF,.REQ,.CTX,.TCTX,10,"recent")
 	D LOADFILES^EFUZYFS(.CONF,8,.TCTX,+$G(CTX("efuzy","userId")))
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
-	D LOADAUTOS^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("files",1)) S TCTX("filesAny")=1
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
-	I $D(TCTX("automation",1)) S TCTX("automationAny")=1
 	D POSTLIST(.TCTX)
 	D WORKFLOWS(.TCTX)
+	D FIRSTRUN(.TCTX)
 	Q
 	;
 BUILDPREV(CONF,REQ,CTX,JOBID,TCTX)
@@ -34,6 +33,7 @@ BUILDPREV(CONF,REQ,CTX,JOBID,TCTX)
 	S TCTX("page","eyebrow")="Workflow preview"
 	S TCTX("job","id")=+$G(JOBID)
 	D WHO(.REQ,.CTX,.TCTX)
+	D FIRSTRUN(.TCTX)
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADPREV(.CONF,+$G(JOBID),.TCTX,+$G(CTX("efuzy","userId")))
@@ -50,6 +50,7 @@ BUILDJOBS(CONF,REQ,CTX,TCTX)
 	S TCTX("page","lead")="Review published workflow runs, filter by status, and open detail pages or artifact downloads."
 	S TCTX("page","eyebrow")="Operational history"
 	D WHO(.REQ,.CTX,.TCTX)
+	D FIRSTRUN(.TCTX)
 	D LOADHIST(.CONF,.REQ,.CTX,.TCTX,50,"jobs")
 	Q
 	;
@@ -62,6 +63,7 @@ BUILDPROFS(CONF,REQ,CTX,TCTX)
 	S TCTX("page","lead")="Save field sets, column order, delimiter rules, and output naming for biller-friendly CSV exports."
 	S TCTX("page","eyebrow")="Profile catalog"
 	D WHO(.REQ,.CTX,.TCTX)
+	D FIRSTRUN(.TCTX)
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADMAPS^EFU837EXPMP(.TCTX)
@@ -77,6 +79,7 @@ BUILDPROF(CONF,REQ,CTX,ID,TCTX)
 	S TCTX("page","lead")="Configure export mode, field selection, quoting, headers, and naming without leaving the SSR workspace."
 	S TCTX("page","eyebrow")="Profile design"
 	D WHO(.REQ,.CTX,.TCTX)
+	D FIRSTRUN(.TCTX)
 	D LOADPROF^EFUZYCFG(.CONF,ID,.TCTX,+$G(CTX("efuzy","userId")))
 	D LOADMAPS^EFU837EXPMP(.TCTX)
 	D MODESEL(.TCTX)
@@ -109,6 +112,7 @@ BUILDJOB(CONF,REQ,CTX,ID,TCTX)
 	S TCTX("page","eyebrow")="Published job"
 	S TCTX("job","id")=+$G(ID)
 	D WHO(.REQ,.CTX,.TCTX)
+	D FIRSTRUN(.TCTX)
 	D LOADPROFL^EFUZYCFG(.CONF,.TCTX,+$G(CTX("efuzy","userId")))
 	I $D(TCTX("profiles",1)) S TCTX("profilesAny")=1
 	D LOADJOB(.CONF,+$G(ID),.TCTX,+$G(CTX("efuzy","userId")))
@@ -124,6 +128,11 @@ BASE(TCTX)
 	S TCTX("theme","mode")="dark"
 	S TCTX("theme","toggleLabel")="Toggle theme"
 	S TCTX("shell","eyebrow")="efuzy / MUMPS.IO"
+	S TCTX("shell","menuLabel")="Open navigation"
+	S TCTX("shell","helpLabel")="Open onboarding"
+	S TCTX("shell","workspaceHref")="/efuzy/workspace"
+	S TCTX("shell","jobsHref")="/efuzy/jobs"
+	S TCTX("shell","profilesHref")="/efuzy/profiles"
 	S TCTX("badges","mvp")="837 to CSV"
 	S TCTX("badges","arch")="SSR-first"
 	S TCTX("nav",1,"key")="workspace"
@@ -138,10 +147,37 @@ BASE(TCTX)
 	S TCTX("nav",3,"label")="Profiles"
 	S TCTX("nav",3,"href")="/efuzy/profiles"
 	S TCTX("nav",3,"hint")="CSV output definitions"
-	S TCTX("nav",4,"key")="automation"
-	S TCTX("nav",4,"label")="Automation"
-	S TCTX("nav",4,"href")="/efuzy/automation"
-	S TCTX("nav",4,"hint")="Folder-driven workflows"
+	D FIRSTRUN(.TCTX)
+	Q
+	;
+FIRSTRUN(TCTX)
+	S TCTX("onboarding","storageKey")="efuzy-onboarding-v3"
+	S TCTX("onboarding","title")="Get started in under a minute"
+	S TCTX("onboarding","body")="Use the workspace like an operational workbench: stage a file, review the preview, then publish artifacts only when the output looks right."
+	S TCTX("onboarding","primaryLabel")="Show walkthrough"
+	S TCTX("onboarding","dismissLabel")="Skip for now"
+	S TCTX("onboarding","reopenLabel")="Onboarding"
+	S TCTX("onboarding","totalSteps")=4
+	S TCTX("onboarding","step",1,"number")=1
+	S TCTX("onboarding","step",1,"total")=4
+	S TCTX("onboarding","step",1,"title")="Stage an 837 file"
+	S TCTX("onboarding","step",1,"body")="Drop a file into Workspace or use the file picker. A queued job is created without publishing anything yet."
+	S TCTX("onboarding","step",1,"target")="Workspace"
+	S TCTX("onboarding","step",2,"number")=2
+	S TCTX("onboarding","step",2,"total")=4
+	S TCTX("onboarding","step",2,"title")="Review preview and diagnostics"
+	S TCTX("onboarding","step",2,"body")="Open Preview to inspect claim rows, service lines, warnings, errors, and trace coverage before release."
+	S TCTX("onboarding","step",2,"target")="Preview"
+	S TCTX("onboarding","step",3,"number")=3
+	S TCTX("onboarding","step",3,"total")=4
+	S TCTX("onboarding","step",3,"title")="Choose output shape"
+	S TCTX("onboarding","step",3,"body")="Apply a saved profile when you need operator-facing CSV columns in addition to canonical package files."
+	S TCTX("onboarding","step",3,"target")="Profiles"
+	S TCTX("onboarding","step",4,"number")=4
+	S TCTX("onboarding","step",4,"total")=4
+	S TCTX("onboarding","step",4,"title")="Download or revisit later"
+	S TCTX("onboarding","step",4,"body")="Use Job History for artifacts, manifests, rebuilt X12, round-trip reports, and repeatable audit review."
+	S TCTX("onboarding","step",4,"target")="Jobs"
 	Q
 	;
 ACT(TCTX,KEY)
@@ -154,6 +190,7 @@ WHO(REQ,CTX,TCTX)
 	S TCTX("session","isAuthenticated")=$S(+$G(CTX("efuzy","userId"))>0:1,1:0)
 	S TCTX("session","userId")=+$G(CTX("efuzy","userId"))
 	S TCTX("session","login")=$G(CTX("efuzy","login"))
+	S TCTX("session","showOnboarding")=+$G(CTX("efuzy","showOnboarding"))
 	S TCTX("session","demoHref")="/efuzy/demo"
 	S TCTX("session","logoutAction")="/efuzy/demo/logout"
 	Q
@@ -194,9 +231,9 @@ WORKFLOWS(TCTX)
 	S TCTX("workflow",2,"name")="Published job artifacts"
 	S TCTX("workflow",2,"desc")="Keep canonical claims, canonical lines, manifests, round-trip output, and trace in one operator-facing job record."
 	S TCTX("workflow",2,"tag")="Artifact contract"
-	S TCTX("workflow",3,"name")="Watched folder automation"
-	S TCTX("workflow",3,"desc")="Bind input, output, archive, and failure folders to a saved profile for repeatable processing."
-	S TCTX("workflow",3,"tag")="No heavy SPA"
+	S TCTX("workflow",3,"name")="Saved export profiles"
+	S TCTX("workflow",3,"desc")="Reuse dense CSV output rules so operators can stage, review, and publish with less rework."
+	S TCTX("workflow",3,"tag")="Operator ready"
 	Q
 	;
 LOADHIST(CONF,REQ,CTX,TCTX,LIMIT,MODE)
@@ -674,7 +711,35 @@ POSTPREV(TCTX)
 	S TCTX("job","plannedOutputName")=$G(^MIO("EFUZY","job",+$G(TCTX("job","id")),"plannedOutputName"),$G(TCTX("job","plannedOutputName")))
 	I $G(TCTX("job","outputName"))="",$G(TCTX("job","outputPath"))'="" S TCTX("job","outputName")=$P($G(TCTX("job","outputPath")),"/",$L($G(TCTX("job","outputPath")),"/"))
 	I $G(TCTX("job","outputPath"))'="" S TCTX("job","outputHref")="/efuzy/api/export/"_+$G(TCTX("job","id"))
+	D PREPDOS(.TCTX)
 	Q
+	;
+PREPDOS(TCTX)
+	N N,CID,DATE
+	S N=0 F  S N=$O(TCTX("preview","lines",N)) Q:'N  D
+	. S DATE=$$FIRSTVAL($G(TCTX("preview","lines",N,"date_of_service")),$G(TCTX("preview","lines",N,"svc_date")),$G(TCTX("preview","lines",N,"line_service_date")),$G(TCTX("preview","lines",N,"claim_date")))
+	. I DATE="" S DATE="-"
+	. S TCTX("preview","lines",N,"date_of_service")=DATE
+	S N=0 F  S N=$O(TCTX("preview","claims",N)) Q:'N  D
+	. S CID=$G(TCTX("preview","claims",N,"claim_id"))
+	. S DATE=$$FIRSTVAL($G(TCTX("preview","claims",N,"date_of_service")),$G(TCTX("preview","claims",N,"claim_date")),$G(TCTX("preview","claims",N,"from_date")),$$LINEBYCID(.TCTX,CID))
+	. I DATE="" S DATE="-"
+	. S TCTX("preview","claims",N,"date_of_service")=DATE
+	Q
+	;
+LINEBYCID(TCTX,CID)
+	N N,DATE
+	S DATE=""
+	S N=0 F  S N=$O(TCTX("preview","lines",N)) Q:'N!(DATE'="")  D
+	. I $G(TCTX("preview","lines",N,"claim_id"))'=$G(CID) Q
+	. S DATE=$$FIRSTVAL($G(TCTX("preview","lines",N,"date_of_service")),$G(TCTX("preview","lines",N,"svc_date")),$G(TCTX("preview","lines",N,"line_service_date")))
+	Q DATE
+	;
+FIRSTVAL(A,B,C,D)
+	I $G(A)'="" Q A
+	I $G(B)'="" Q B
+	I $G(C)'="" Q C
+	Q $G(D)
 	;
 POSTDETAIL(TCTX)
 	D POSTPREV(.TCTX)

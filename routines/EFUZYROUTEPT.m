@@ -21,10 +21,12 @@ T800(FAIL) ; route registration wires expected handlers and auth metadata
 	K ^MIO("ROUTE")
 	D REG^EFUZY(.CONF)
 	D EQ(.FAIL,"[T800][workspace route]",$G(^MIO("ROUTE","RAW","GET","/efuzy/workspace")),"WORKSPACE^EFUZY")
+	D EQ(.FAIL,"[T800][desktop route]",$G(^MIO("ROUTE","RAW","GET","/efuzy/desktop")),"DESKTOP^EFUZY")
 	D EQ(.FAIL,"[T800][preview route]",$G(^MIO("ROUTE","RAW","GET","/efuzy/preview/:jobId")),"PREVIEW^EFUZY")
 	D EQ(.FAIL,"[T800][upload route]",$G(^MIO("ROUTE","RAW","POST","/efuzy/api/upload")),"APIUPLOAD^EFUZY")
 	D EQ(.FAIL,"[T800][retry route]",$G(^MIO("ROUTE","RAW","POST","/efuzy/api/job/retry")),"APIRETRY^EFUZY")
 	D EQ(.FAIL,"[T800][auth required]",+$G(^MIO("ROUTE","META","GET","/efuzy/workspace","authRequired")),0)
+	D EQ(.FAIL,"[T800][desktop roles]",$G(^MIO("ROUTE","META","GET","/efuzy/desktop","roles")),"operator,admin")
 	D EQ(.FAIL,"[T800][roles]",$G(^MIO("ROUTE","META","GET","/efuzy/workspace","roles")),"operator,admin")
 	Q
 	;

@@ -51,7 +51,7 @@
       <div class="panel rounded-[1.5rem] p-5" id="claims">
         <div class="section-kicker">Preview</div><h2 class="mt-2 text-lg font-semibold">Claims</h2>
         {{#preview.claimsAny}}
-        <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10"><table class="grid-table min-w-full text-sm"><thead class="bg-slate-500/5 text-left muted"><tr><th class="px-4 py-3">Claim</th><th class="px-4 py-3">Patient</th><th class="px-4 py-3">Subscriber</th><th class="px-4 py-3">Charge</th></tr></thead><tbody>{{#preview.claims}}<tr class="table-row border-t border-slate-500/10"><td class="px-4 py-3 font-semibold">{{claim_id}}</td><td class="px-4 py-3">{{patient_name}}</td><td class="px-4 py-3">{{subscriber_name}}</td><td class="px-4 py-3">{{total_charge}}</td></tr>{{/preview.claims}}</tbody></table></div>
+        <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10"><table class="grid-table min-w-full text-sm"><thead class="bg-slate-500/5 text-left muted"><tr><th class="px-4 py-3">Claim</th><th class="px-4 py-3">Patient</th><th class="px-4 py-3">Subscriber</th><th class="px-4 py-3">Date of service</th><th class="px-4 py-3">Charge</th></tr></thead><tbody>{{#preview.claims}}<tr class="table-row border-t border-slate-500/10"><td class="px-4 py-3 font-semibold">{{claim_id}}</td><td class="px-4 py-3">{{patient_name}}</td><td class="px-4 py-3">{{subscriber_name}}</td><td class="px-4 py-3">{{date_of_service}}</td><td class="px-4 py-3">{{total_charge}}</td></tr>{{/preview.claims}}</tbody></table></div>
         {{/preview.claimsAny}}
         {{^preview.claimsAny}}<p class="mt-4 text-sm muted">No claim rows stored.</p>{{/preview.claimsAny}}
       </div>
@@ -59,7 +59,7 @@
       <div class="panel rounded-[1.5rem] p-5" id="lines">
         <div class="section-kicker">Preview</div><h2 class="mt-2 text-lg font-semibold">Service lines</h2>
         {{#preview.linesAny}}
-        <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10"><table class="grid-table min-w-full text-sm"><thead class="bg-slate-500/5 text-left muted"><tr><th class="px-4 py-3">Claim</th><th class="px-4 py-3">Line</th><th class="px-4 py-3">Procedure</th><th class="px-4 py-3">Charge</th></tr></thead><tbody>{{#preview.lines}}<tr class="table-row border-t border-slate-500/10"><td class="px-4 py-3">{{claim_id}}</td><td class="px-4 py-3">{{line_no}}</td><td class="px-4 py-3">{{procedure_code}}</td><td class="px-4 py-3">{{charge}}</td></tr>{{/preview.lines}}</tbody></table></div>
+        <div class="data-scroll mt-4 overflow-x-auto rounded-2xl border border-slate-500/10"><table class="grid-table min-w-full text-sm"><thead class="bg-slate-500/5 text-left muted"><tr><th class="px-4 py-3">Claim</th><th class="px-4 py-3">Line</th><th class="px-4 py-3">Procedure</th><th class="px-4 py-3">Date of service</th><th class="px-4 py-3">Charge</th></tr></thead><tbody>{{#preview.lines}}<tr class="table-row border-t border-slate-500/10"><td class="px-4 py-3">{{claim_id}}</td><td class="px-4 py-3">{{line_no}}</td><td class="px-4 py-3">{{procedure_code}}</td><td class="px-4 py-3">{{date_of_service}}</td><td class="px-4 py-3">{{charge}}</td></tr>{{/preview.lines}}</tbody></table></div>
         {{/preview.linesAny}}
         {{^preview.linesAny}}<p class="mt-4 text-sm muted">No line rows stored.</p>{{/preview.linesAny}}
       </div>
