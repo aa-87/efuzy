@@ -1,4 +1,4 @@
-# https//efuzy.com
+# https://efuzy.com
 
 Self-hosted, SSR-first file-processing workspace built on YottaDB and the MUMPS.IO stack.
 
