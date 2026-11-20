@@ -1,4 +1,4 @@
-# efuzy (http://104.37.188.67:8080/)
+# efuzy 
 
 Self-hosted, SSR-first file-processing workspace built on YottaDB and the MUMPS.IO stack.
 
