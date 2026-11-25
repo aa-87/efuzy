@@ -6,6 +6,7 @@ Self-hosted, SSR-first file-processing workspace built on YottaDB and the MUMPS.
 
 efuzy is a production-minded workspace for structured file processing.
 ![](https://github.com/aa-87/efuzy/blob/main/docs/4.png)
+![](https://github.com/aa-87/efuzy/blob/main/docs/2.png)
 The current MVP is:
 
 - X12 837 to configurable CSV
